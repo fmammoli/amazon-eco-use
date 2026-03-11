@@ -15,6 +15,13 @@ export type FilterPanelProps = {
   selectedFilter: string
   onSelectFilter: (id: string) => void
   activeFilterLabel: string
+  speciesUseFilterGroups: Array<{
+    id: string
+    label: string
+    filters: Array<{ id: string; label: string }>
+  }>
+  selectedUseFilters: string[]
+  onToggleSpeciesUseFilter: (id: string) => void
   numericTraits: string[]
   traitDomains: TraitDomains
   traitFilters: TraitFilter[]
@@ -27,6 +34,8 @@ export type FilterPanelProps = {
   includeMissing: boolean
   missingValueCounts: Record<string, number>
   onToggleIncludeMissing: () => void
+  showNoUse: boolean
+  onToggleShowNoUse: () => void
   onReset: () => void
 }
 
@@ -35,6 +44,9 @@ export function FilterPanel({
   selectedFilter,
   onSelectFilter,
   activeFilterLabel,
+  speciesUseFilterGroups,
+  selectedUseFilters,
+  onToggleSpeciesUseFilter,
   numericTraits,
   traitDomains,
   traitFilters,
@@ -44,38 +56,12 @@ export function FilterPanel({
   includeMissing,
   missingValueCounts,
   onToggleIncludeMissing,
+  showNoUse,
+  onToggleShowNoUse,
   onReset,
 }: FilterPanelProps) {
   return (
     <aside className="rounded-lg border border-border bg-card/80 p-4 shadow-sm backdrop-blur-xl">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Filters</h2>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-          {activeFilterLabel}
-        </span>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() => onSelectFilter(filter.id)}
-            className={
-              "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition " +
-              (filter.id === selectedFilter
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-input bg-background hover:bg-accent/50")
-            }
-          >
-            <span>{filter.label}</span>
-            {filter.id === selectedFilter ? (
-              <span className="text-xs">✓</span>
-            ) : null}
-          </button>
-        ))}
-      </div>
-
       <div className="mt-4 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <button
@@ -99,6 +85,47 @@ export function FilterPanel({
           />
           <span>Include missing values</span>
         </label>
+      </div>
+
+      <div className="mt-4 space-y-2 rounded-md border border-input bg-background p-3">
+        <p className="text-xs font-medium text-muted-foreground">
+          Species Uses
+        </p>
+        <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={showNoUse}
+            onChange={onToggleShowNoUse}
+            className="h-4 w-4 rounded border border-input bg-background text-primary focus:ring-primary"
+          />
+          <span>Show trees with no use</span>
+        </label>
+
+        <div className="space-y-3">
+          {speciesUseFilterGroups.map((group) => (
+            <div key={group.id} className="space-y-2">
+              <p className="text-[11px] font-medium text-muted-foreground">
+                {group.label}
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {group.filters.map((useFilter) => (
+                  <label
+                    key={useFilter.id}
+                    className="inline-flex items-center gap-2 text-xs text-muted-foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedUseFilters.includes(useFilter.id)}
+                      onChange={() => onToggleSpeciesUseFilter(useFilter.id)}
+                      className="h-4 w-4 rounded border border-input bg-background text-primary focus:ring-primary"
+                    />
+                    <span>{useFilter.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {numericTraits.length > 0 ? (
@@ -186,11 +213,6 @@ export function FilterPanel({
           </div>
         </div>
       ) : null}
-
-      <div className="mt-6 rounded-md bg-muted p-3 text-xs text-muted-foreground">
-        <p className="font-medium">Tip</p>
-        <p>Resize the window to see the layout adapt on smaller screens.</p>
-      </div>
     </aside>
   )
 }

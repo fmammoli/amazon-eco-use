@@ -39,7 +39,7 @@ export function MapView({
   )
 
   return (
-    <div className="mt-4 h-95 w-full rounded-md border border-border bg-muted">
+    <div className="mt-4 h-144 w-full rounded-md border border-border bg-muted pb-4">
       <Map
         ref={mapRef}
         reuseMaps
