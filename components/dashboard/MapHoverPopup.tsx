@@ -14,6 +14,7 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
     string,
     unknown
   >
+  const hiddenHoverFields = new Set(["task5_use", "coelho_arboreal_uses"])
 
   return (
     <Popup
@@ -28,6 +29,7 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
         <div className="font-semibold">Plant info</div>
         <div className="mt-1 space-y-0.5">
           {Object.entries(properties)
+            .filter(([key]) => !hiddenHoverFields.has(key))
             .slice(0, 10)
             .map(([key, value]) => (
               <div key={key} className="flex justify-between">

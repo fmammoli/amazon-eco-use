@@ -2,17 +2,151 @@
 
 import { useEffect, useMemo, useState } from "react"
 
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer"
 import { FilterPanel } from "@/components/dashboard/FilterPanel"
 import { MapView } from "@/components/dashboard/MapView"
+import { PlantDetailsDrawer } from "@/components/dashboard/PlantDetailsDrawer"
+
+type INaturalistPhoto = {
+  thumb?: string
+  large?: string
+  attribution?: string
+  photographer?: string
+  observation_url?: string
+}
+
+type INaturalistDefaultPhoto = {
+  attribution?: string
+  attribution_name?: string
+  square_url?: string
+  medium_url?: string
+  url?: string
+  license_code?: string
+}
+
+type NormalizedINaturalistImage = {
+  thumbUrl: string
+  largeUrl: string
+  attribution?: string
+  photographer?: string
+  observationUrl?: string
+  licenseCode?: string
+}
+
+type SpeciesMetadata = {
+  Species: string
+  task5_use?: Record<string, unknown> | null
+  coelho_arboreal_uses?: Record<string, unknown> | null
+  gbif?: {
+    match?: {
+      order?: string
+      family?: string
+      vernacularName?: string
+    }
+    vernacular?:
+      | string
+      | {
+          vernacularName?: string
+        }
+      | null
+  }
+  inaturalist?: {
+    taxon?: {
+      observations_count: number
+      default_photo?: INaturalistDefaultPhoto | null
+    }
+    images?: INaturalistPhoto[]
+  }
+}
+
+const normalizeSpeciesName = (value: string) => value.trim().toLowerCase()
+
+const normalizeInaturalistImages = (
+  inaturalist: SpeciesMetadata["inaturalist"] | undefined
+) => {
+  const images: NormalizedINaturalistImage[] = []
+
+  inaturalist?.images?.forEach((image) => {
+    if (!image.thumb || !image.large) return
+
+    images.push({
+      thumbUrl: image.thumb,
+      largeUrl: image.large,
+      attribution: image.attribution,
+      photographer: image.photographer,
+      observationUrl: image.observation_url,
+    })
+  })
+
+  const defaultPhoto = inaturalist?.taxon?.default_photo
+  if (defaultPhoto) {
+    const thumbUrl = defaultPhoto.square_url ?? defaultPhoto.url
+    const largeUrl = defaultPhoto.medium_url ?? defaultPhoto.square_url
+
+    if (thumbUrl && largeUrl) {
+      images.push({
+        thumbUrl,
+        largeUrl,
+        attribution: defaultPhoto.attribution,
+        photographer: defaultPhoto.attribution_name,
+        licenseCode: defaultPhoto.license_code,
+      })
+    }
+  }
+
+  const seen = new Set<string>()
+
+  return images.filter((image) => {
+    const key = `${image.largeUrl}|${image.observationUrl ?? ""}`
+    if (seen.has(key)) return false
+
+    seen.add(key)
+    return true
+  })
+}
+
+const mergeSpeciesMetadataIntoProps = (
+  props: Record<string, unknown>,
+  metadata: SpeciesMetadata | undefined
+) => {
+  if (!metadata) return props
+
+  props["task5_use"] = metadata.task5_use ?? null
+  props["coelho_arboreal_uses"] = metadata.coelho_arboreal_uses ?? null
+
+  if (metadata.coelho_arboreal_uses) {
+    const uses = metadata.coelho_arboreal_uses
+    props["Food"] = uses["Food"]
+    props["Medicine"] = uses["Medicine"]
+    props["Manufacture"] = uses["Manufacture"]
+    props["Construction"] = uses["Construction"]
+    props["Thatching"] = uses["Thatching"]
+    props["Firewood"] = uses["Firewood"]
+  }
+
+  if (metadata.gbif?.match) {
+    const gbifMatch = metadata.gbif.match as Record<string, unknown>
+    props["gbif_order"] = gbifMatch["order"] ?? null
+    props["gbif_family"] = gbifMatch["family"] ?? null
+  }
+
+  const vernacular = metadata.gbif?.vernacular
+  if (typeof vernacular === "string") {
+    props["vernacular_name"] = vernacular
+  } else if (vernacular && typeof vernacular === "object") {
+    props["vernacular_name"] = vernacular.vernacularName ?? null
+  }
+
+  if (metadata.inaturalist?.taxon) {
+    props["inaturalist_observations"] =
+      metadata.inaturalist.taxon.observations_count ?? 0
+  }
+
+  const inaturalistGallery = normalizeInaturalistImages(metadata.inaturalist)
+  props["inaturalist_images"] = inaturalistGallery.length
+  props["inaturalist_image_gallery"] = inaturalistGallery
+
+  return props
+}
 
 const filters = [
   { id: "all", label: "All locations" },
@@ -23,6 +157,9 @@ const filters = [
 export function Dashboard() {
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [geojson, setGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [speciesMetadataByName, setSpeciesMetadataByName] = useState<
+    Map<string, SpeciesMetadata>
+  >(new Map())
   const [traitFilters, setTraitFilters] = useState<
     Array<{ id: string; trait: string; range: [number, number] }>
   >([])
@@ -38,8 +175,44 @@ export function Dashboard() {
     )
   }, [selectedFilter])
 
+  const featuresByPlantId = useMemo(() => {
+    const lookup = new Map<string | number, GeoJSON.Feature>()
+
+    geojson?.features.forEach((feature) => {
+      const props = feature.properties as Record<string, unknown> | null
+      const plantId =
+        (props?.["plant_id"] as string | number | undefined) ?? feature.id
+
+      if (plantId != null) {
+        lookup.set(plantId, feature)
+      }
+    })
+
+    return lookup
+  }, [geojson])
+
   const handleFeatureClick = (feature: GeoJSON.Feature) => {
-    setSelectedFeature(feature)
+    const clickedProps = feature.properties as Record<string, unknown> | null
+    const plantId =
+      (clickedProps?.["plant_id"] as string | number | undefined) ?? feature.id
+    const baseFeature =
+      (plantId != null ? featuresByPlantId.get(plantId) : null) ?? feature
+    const baseProps = (baseFeature.properties ?? {}) as Record<string, unknown>
+    const speciesName = baseProps["species_name"] as string | undefined
+    const speciesMetadata = speciesName
+      ? speciesMetadataByName.get(normalizeSpeciesName(speciesName))
+      : undefined
+
+    setSelectedFeature({
+      ...baseFeature,
+      properties: mergeSpeciesMetadataIntoProps(
+        {
+          ...baseProps,
+        },
+        speciesMetadata
+      ),
+    })
+
     setDrawerOpen(true)
   }
 
@@ -48,15 +221,30 @@ export function Dashboard() {
 
     const load = async () => {
       try {
-        const res = await fetch(
+        // Load GeoJSON data
+        const geoRes = await fetch(
           "/data/final_AmzFACE_merged_by_coords.with_ids.geojson"
         )
-        if (!res.ok) throw new Error("Failed to load geojson")
-        const data = (await res.json()) as GeoJSON.FeatureCollection
-        // Ensure each feature has a stable id so MapLibre feature-state can highlight it.
-        // We prefer the `plant_id` property when available (stable across re-generations).
-        data.features.forEach((feature) => {
-          const props = feature.properties as Record<string, unknown> | null
+        if (!geoRes.ok) throw new Error("Failed to load geojson")
+        const geoData = (await geoRes.json()) as GeoJSON.FeatureCollection
+
+        // Load species metadata
+        const speciesRes = await fetch(
+          "/data/final_data_species_with_gbif_inaturalist copy.json"
+        )
+        if (!speciesRes.ok) throw new Error("Failed to load species metadata")
+        const speciesMetadata = (await speciesRes.json()) as SpeciesMetadata[]
+
+        // Create lookup map by species name
+        const speciesMap = new Map(
+          speciesMetadata.map((sp) => [normalizeSpeciesName(sp.Species), sp])
+        )
+
+        // Keep the map source as tree-level GeoJSON only.
+        // Species metadata is joined later for the clicked feature drawer.
+        geoData.features.forEach((feature) => {
+          const props = (feature.properties ?? {}) as Record<string, unknown>
+
           const plantId = props?.["plant_id"] as string | number | undefined
           if (plantId != null) {
             // Use the stable plant_id as the GeoJSON feature id.
@@ -64,7 +252,11 @@ export function Dashboard() {
             feature.id = plantId
           }
         })
-        if (!canceled) setGeojson(data)
+
+        if (!canceled) {
+          setSpeciesMetadataByName(speciesMap)
+          setGeojson(geoData)
+        }
       } catch {
         // ignore for now
       }
@@ -189,79 +381,14 @@ export function Dashboard() {
     }
   }, [geojson, traitFilters, includeMissing])
 
-  const selectedFeatureProps = (selectedFeature?.properties ?? null) as Record<
-    string,
-    unknown
-  > | null
-
   return (
     <>
-      <Drawer
+      <PlantDetailsDrawer
         open={drawerOpen}
-        onOpenChange={(open) => {
-          setDrawerOpen(open)
-          if (!open) setSelectedFeature(null)
-        }}
-        direction="right"
-      >
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Plant details</DrawerTitle>
-            <DrawerDescription>
-              Click a point on the map to view its raw properties.
-            </DrawerDescription>
-          </DrawerHeader>
-
-          <div className="px-4 pb-4">
-            {selectedFeatureProps ? (
-              <div className="space-y-3">
-                <div className="rounded-md border border-border bg-background p-3">
-                  <h3 className="text-xs font-semibold">Geometry</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedFeature?.geometry?.type}
-                    {selectedFeature?.geometry?.type === "Point" &&
-                    Array.isArray(selectedFeature.geometry?.coordinates)
-                      ? ` — [${selectedFeature.geometry?.coordinates?.join(", ")}]`
-                      : null}
-                  </p>
-                </div>
-
-                <div className="rounded-md border border-border bg-background p-3">
-                  <h3 className="text-xs font-semibold">Properties</h3>
-                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                    {Object.entries(selectedFeatureProps)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([key, value]) => (
-                        <div key={key} className="flex justify-between">
-                          <span className="font-medium text-foreground">
-                            {key}
-                          </span>
-                          <span className="truncate text-right">
-                            {value === null || value === undefined
-                              ? "—"
-                              : typeof value === "object"
-                                ? JSON.stringify(value)
-                                : String(value)}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Click a point on the map to view details.
-              </p>
-            )}
-          </div>
-
-          <DrawerFooter>
-            <DrawerClose className="ml-auto rounded-md border border-input bg-background px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent/50">
-              Close
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+        onOpenChange={setDrawerOpen}
+        selectedFeature={selectedFeature}
+        onSelectFeature={setSelectedFeature}
+      />
 
       <main className="min-h-screen bg-background px-4 py-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-6xl gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-[auto_1fr]">

@@ -1,4 +1,17 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "inaturalist-open-data.s3.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "static.inaturalist.org",
+      },
+    ],
+  },
+}
 
 export default nextConfig
