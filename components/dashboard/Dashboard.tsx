@@ -58,7 +58,93 @@ type SpeciesMetadata = {
   }
 }
 
-const normalizeSpeciesName = (value: string) => value.trim().toLowerCase()
+type SpeciesUseFilter = {
+  id: string
+  label: string
+}
+
+type SpeciesUseFilterGroup = {
+  id: string
+  label: string
+  filters: SpeciesUseFilter[]
+}
+
+const normalizeSpeciesName = (value: unknown) => {
+  if (typeof value !== "string") return ""
+  return value.trim().toLowerCase()
+}
+
+const speciesUseFilterGroups: SpeciesUseFilterGroup[] = [
+  {
+    id: "task5",
+    label: "Task 5 Uses",
+    filters: [
+      { id: "task5-food", label: "Food" },
+      { id: "task5-medicinal", label: "Medicinal" },
+      { id: "task5-raw-material", label: "Raw Material" },
+    ],
+  },
+  {
+    id: "coelho",
+    label: "Coelho Arboreal Uses",
+    filters: [
+      { id: "coelho-food", label: "Food" },
+      { id: "coelho-medicine", label: "Medicine" },
+      { id: "coelho-manufacture", label: "Manufacture" },
+      { id: "coelho-construction", label: "Construction" },
+      { id: "coelho-thatching", label: "Thatching" },
+      { id: "coelho-firewood", label: "Firewood" },
+    ],
+  },
+]
+
+const allFilterIds = speciesUseFilterGroups.flatMap((g) =>
+  g.filters.map((f) => f.id)
+)
+
+const isPositiveUseValue = (value: unknown) => {
+  if (value === null || value === undefined) return false
+  if (typeof value === "number") return value > 0
+  if (typeof value !== "string") return false
+
+  const normalized = value.trim().toLowerCase()
+  if (!normalized || normalized === "." || normalized === "na") return false
+
+  return normalized === "1" || normalized === "x" || normalized === "yes"
+}
+
+const hasSpeciesUse = (
+  metadata: SpeciesMetadata | undefined,
+  filterId: string
+) => {
+  if (!metadata) return false
+
+  const coelho = metadata.coelho_arboreal_uses ?? null
+  const task5 = metadata.task5_use ?? null
+
+  switch (filterId) {
+    case "task5-food":
+      return isPositiveUseValue(task5?.["Food"])
+    case "task5-medicinal":
+      return isPositiveUseValue(task5?.["Medicinal"])
+    case "task5-raw-material":
+      return isPositiveUseValue(task5?.["Raw material"])
+    case "coelho-food":
+      return isPositiveUseValue(coelho?.["Food"])
+    case "coelho-medicine":
+      return isPositiveUseValue(coelho?.["Medicine"])
+    case "coelho-manufacture":
+      return isPositiveUseValue(coelho?.["Manufacture"])
+    case "coelho-construction":
+      return isPositiveUseValue(coelho?.["Construction"])
+    case "coelho-thatching":
+      return isPositiveUseValue(coelho?.["Thatching"])
+    case "coelho-firewood":
+      return isPositiveUseValue(coelho?.["Firewood"])
+    default:
+      return false
+  }
+}
 
 const normalizeInaturalistImages = (
   inaturalist: SpeciesMetadata["inaturalist"] | undefined
@@ -163,7 +249,10 @@ export function Dashboard() {
   const [traitFilters, setTraitFilters] = useState<
     Array<{ id: string; trait: string; range: [number, number] }>
   >([])
+  const [selectedUseFilters, setSelectedUseFilters] =
+    useState<string[]>(allFilterIds)
   const [includeMissing, setIncludeMissing] = useState(true)
+  const [showNoUse, setShowNoUse] = useState(false)
   const [selectedFeature, setSelectedFeature] =
     useState<GeoJSON.Feature | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -199,8 +288,9 @@ export function Dashboard() {
       (plantId != null ? featuresByPlantId.get(plantId) : null) ?? feature
     const baseProps = (baseFeature.properties ?? {}) as Record<string, unknown>
     const speciesName = baseProps["species_name"] as string | undefined
-    const speciesMetadata = speciesName
-      ? speciesMetadataByName.get(normalizeSpeciesName(speciesName))
+    const normalizedSpeciesName = normalizeSpeciesName(speciesName)
+    const speciesMetadata = normalizedSpeciesName
+      ? speciesMetadataByName.get(normalizedSpeciesName)
       : undefined
 
     setSelectedFeature({
@@ -236,9 +326,13 @@ export function Dashboard() {
         const speciesMetadata = (await speciesRes.json()) as SpeciesMetadata[]
 
         // Create lookup map by species name
-        const speciesMap = new Map(
-          speciesMetadata.map((sp) => [normalizeSpeciesName(sp.Species), sp])
-        )
+        const speciesMap = new Map<string, SpeciesMetadata>()
+        speciesMetadata.forEach((sp) => {
+          const normalizedName = normalizeSpeciesName(sp?.Species)
+          if (!normalizedName) return
+
+          speciesMap.set(normalizedName, sp)
+        })
 
         // Keep the map source as tree-level GeoJSON only.
         // Species metadata is joined later for the clicked feature drawer.
@@ -356,17 +450,34 @@ export function Dashboard() {
 
   const filteredData = useMemo(() => {
     if (!geojson) return null
-    if (traitFilters.length === 0) return geojson
 
     const filteredFeatures = geojson.features.filter((feature) => {
       const props = feature.properties as Record<string, unknown> | null
-      if (!props) return includeMissing
+
+      const speciesName = props
+        ? (props["species_name"] as string | undefined)
+        : undefined
+      const normalizedName = normalizeSpeciesName(speciesName)
+      const metadata = normalizedName
+        ? speciesMetadataByName.get(normalizedName)
+        : undefined
+
+      const hasSelectedUse = selectedUseFilters.some((filterId) =>
+        hasSpeciesUse(metadata, filterId)
+      )
+      const speciesHasAnyUse = allFilterIds.some((id) =>
+        hasSpeciesUse(metadata, id)
+      )
+
+      const passesUseFilter = hasSelectedUse || (showNoUse && !speciesHasAnyUse)
+
+      if (!passesUseFilter) return false
+
+      if (traitFilters.length === 0) return true
 
       return traitFilters.every((filter) => {
-        const value = props[filter.trait]
+        const value = props ? props[filter.trait] : undefined
 
-        // If the value is missing or not a number, keep the feature when missing values are included.
-        // When missing values are excluded, drop features missing the trait.
         if (typeof value !== "number" || !Number.isFinite(value)) {
           return includeMissing
         }
@@ -379,7 +490,14 @@ export function Dashboard() {
       ...geojson,
       features: filteredFeatures,
     }
-  }, [geojson, traitFilters, includeMissing])
+  }, [
+    geojson,
+    traitFilters,
+    includeMissing,
+    selectedUseFilters,
+    showNoUse,
+    speciesMetadataByName,
+  ])
 
   return (
     <>
@@ -391,12 +509,21 @@ export function Dashboard() {
       />
 
       <main className="min-h-screen bg-background px-4 py-6 lg:px-8">
-        <div className="mx-auto grid w-full max-w-6xl gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-[auto_1fr]">
+        <div className="mx-auto grid w-full max-w-dvw gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-[auto_1fr]">
           <FilterPanel
             filters={filters}
             selectedFilter={selectedFilter}
             activeFilterLabel={activeFilterLabel}
             onSelectFilter={setSelectedFilter}
+            speciesUseFilterGroups={speciesUseFilterGroups}
+            selectedUseFilters={selectedUseFilters}
+            onToggleSpeciesUseFilter={(filterId) => {
+              setSelectedUseFilters((prev) =>
+                prev.includes(filterId)
+                  ? prev.filter((id) => id !== filterId)
+                  : [...prev, filterId]
+              )
+            }}
             numericTraits={numericTraits}
             traitDomains={traitDomains}
             traitFilters={traitFilters}
@@ -429,8 +556,12 @@ export function Dashboard() {
             includeMissing={includeMissing}
             missingValueCounts={missingValueCounts}
             onToggleIncludeMissing={() => setIncludeMissing((prev) => !prev)}
+            showNoUse={showNoUse}
+            onToggleShowNoUse={() => setShowNoUse((prev) => !prev)}
             onReset={() => {
               setSelectedFilter("all")
+              setSelectedUseFilters(allFilterIds)
+              setShowNoUse(false)
               setIncludeMissing(true)
               const firstTrait = numericTraits[0]
               const firstRange = firstTrait ? traitDomains[firstTrait] : null
