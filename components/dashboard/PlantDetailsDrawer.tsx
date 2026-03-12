@@ -96,7 +96,12 @@ export function PlantDetailsDrawer({
 
     if (typeof value === "string") {
       const normalized = value.trim()
-      return normalized !== "" && normalized !== "." && normalized !== "NA"
+      return (
+        normalized !== "" &&
+        normalized !== "." &&
+        normalized !== "NA" &&
+        normalized !== "NE"
+      )
     }
 
     if (Array.isArray(value)) return value.length > 0
@@ -247,7 +252,10 @@ export function PlantDetailsDrawer({
         hasContent(task5EthnobotanicalUses[key])
       )
     : []
-
+  const task5PlantPartRows: KeyValueRow[] = task5PlantParts.map((key) => ({
+    label: key,
+    value: String(task5EthnobotanicalUses![key] ?? "—"),
+  }))
   const task5Reference = task5EthnobotanicalUses?.["References_x"]
   const task5Webpage = task5EthnobotanicalUses?.["Webpage"]
   const hasSpeciesMetadata = Boolean(
@@ -482,6 +490,12 @@ export function PlantDetailsDrawer({
                   hasContent(task5Webpage) ? String(task5Webpage) : undefined
                 }
               />
+
+              {task5PlantPartRows.length > 0 ? (
+                <SectionCard title="Plant Parts Used (Task 5)">
+                  <KeyValueList rows={task5PlantPartRows} />
+                </SectionCard>
+              ) : null}
 
               {gbifRows.length > 0 ? (
                 <SectionCard title="GBIF Information">
