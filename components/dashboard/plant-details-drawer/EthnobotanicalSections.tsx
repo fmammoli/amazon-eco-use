@@ -4,6 +4,12 @@ import {
 } from "@/components/dashboard/plant-details-drawer/KeyValueList"
 import { SectionCard } from "@/components/dashboard/plant-details-drawer/SectionCard"
 
+const normalizeExternalUrl = (url: string) => {
+  const trimmed = url.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 export function CoelhoEthnobotanicalSection({ rows }: { rows: KeyValueRow[] }) {
   if (rows.length === 0) return null
 
@@ -34,7 +40,16 @@ export function Task5EthnobotanicalSection({
       ? [
           {
             label: "Webpage",
-            value: webpage,
+            value: (
+              <a
+                href={normalizeExternalUrl(webpage)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2 hover:opacity-80"
+              >
+                {webpage}
+              </a>
+            ),
             valueClassName: "break-all text-right",
           },
         ]

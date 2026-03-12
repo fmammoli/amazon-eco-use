@@ -103,7 +103,7 @@ export function MapView({
           }
         }}
         style={{ width: "100%", height: "100%" }}
-        mapStyle="https://api.maptiler.com/maps/streets/style.json?key=TiPo36Cyzyhe2DoDnrm8"
+        mapStyle="https://api.maptiler.com/maps/hybrid/style.json?key=TiPo36Cyzyhe2DoDnrm8"
       >
         <MapLayer data={data} layer={circleLayer} />
         {hoveredPlantId != null ? (

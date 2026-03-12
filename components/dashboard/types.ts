@@ -72,3 +72,22 @@ export type TraitDetailRow = {
   species: string
   value: number | null
 }
+
+export type TraitUseScatterPoint = {
+  plant_id: string | number
+  species_name: string
+  use_category: string
+  use_group: string
+  trait_values: Record<string, number | null>
+}
+
+export type TraitUseScatterRow = {
+  plant_id: string | number
+  species_name: string
+  x_trait: string
+  x_value: number
+  y_trait: string
+  y_value: number
+  use_category: string
+  use_group: string
+}

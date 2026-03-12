@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts"
 import { type ColumnDef } from "@tanstack/react-table"
+import { CircleHelp } from "lucide-react"
 
 import {
   type ChartConfig,
@@ -19,7 +20,14 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { getUseCategoryColor } from "@/components/dashboard/constants"
 import { DataTableModal } from "./DataTableModal"
 
 export type UseCategoryDatum = {
@@ -27,19 +35,6 @@ export type UseCategoryDatum = {
   treeCount: number
   speciesCount: number
 }
-
-// One distinct hue per category slot. Trees bar = full opacity, species bar = 40% opacity of same color.
-const CATEGORY_COLORS = [
-  "oklch(0.65 0.19 250)", // blue
-  "oklch(0.68 0.18 55)", // orange
-  "oklch(0.60 0.18 145)", // green
-  "oklch(0.65 0.18 25)", // red
-  "oklch(0.62 0.18 300)", // purple
-  "oklch(0.68 0.17 185)", // teal
-  "oklch(0.72 0.16 90)", // yellow-green
-  "oklch(0.65 0.18 330)", // pink
-  "oklch(0.60 0.15 220)", // slate-blue
-]
 
 const chartConfig = {
   treeCount: { label: "Trees" },
@@ -67,6 +62,18 @@ export function UseCategoryChart({
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const groupSlug = useMemo(
+    () =>
+      groupLabel
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    [groupLabel]
+  )
+  const orderedCategories = useMemo(
+    () => data.map((entry) => entry.category),
+    [data]
+  )
 
   const maxCount = Math.max(
     ...data.flatMap((d) => [d.treeCount, d.speciesCount]),
@@ -138,7 +145,44 @@ export function UseCategoryChart({
   return (
     <div className="rounded-md border border-border p-3">
       <div className="mb-3 flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold text-foreground">{groupLabel}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-foreground">{groupLabel}</p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                id={`use-category-help-${groupSlug || "group"}`}
+                className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+              >
+                <CircleHelp className="h-3.5 w-3.5" />
+                <span className="sr-only">Use prevalence chart help</span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                className="max-w-sm whitespace-normal"
+              >
+                <div className="space-y-1.5">
+                  <p>
+                    This chart compares use prevalence by category for the
+                    current filter selection.
+                  </p>
+                  <p>
+                    For each category, the darker bar shows the number of trees
+                    and the lighter bar shows the number of species.
+                  </p>
+                  <p>
+                    Categories with tall bars are more prevalent; a large gap
+                    between trees and species can indicate repeated use within
+                    fewer species.
+                  </p>
+                  <p>
+                    Click any bar to open the corresponding records and inspect
+                    the underlying plants.
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <div className="space-y-0.5 text-right text-[11px] text-muted-foreground">
             <p>{totalTrees} trees in view</p>
@@ -164,7 +208,11 @@ export function UseCategoryChart({
         </div>
       </div>
 
-      <ChartContainer config={chartConfig} className="h-52 w-full">
+      <ChartContainer
+        id={`use-category-${groupSlug || "group"}`}
+        config={chartConfig}
+        className="h-52 w-full"
+      >
         <BarChart
           data={data}
           margin={{ top: 16, right: 4, bottom: 0, left: -12 }}
@@ -221,8 +269,11 @@ export function UseCategoryChart({
             }
           />
           <Bar dataKey="treeCount" name="treeCount" radius={[4, 4, 0, 0]}>
-            {data.map((entry, i) => {
-              const color = CATEGORY_COLORS[i % CATEGORY_COLORS.length]
+            {data.map((entry) => {
+              const color = getUseCategoryColor(
+                entry.category,
+                orderedCategories
+              )
               return (
                 <Cell
                   key={entry.category}
@@ -241,8 +292,11 @@ export function UseCategoryChart({
             />
           </Bar>
           <Bar dataKey="speciesCount" name="speciesCount" radius={[4, 4, 0, 0]}>
-            {data.map((entry, i) => {
-              const color = CATEGORY_COLORS[i % CATEGORY_COLORS.length]
+            {data.map((entry) => {
+              const color = getUseCategoryColor(
+                entry.category,
+                orderedCategories
+              )
               return (
                 <Cell
                   key={entry.category}
