@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts"
 import { type ColumnDef } from "@tanstack/react-table"
+import { CircleHelp } from "lucide-react"
 
 import {
   type ChartConfig,
@@ -10,7 +11,14 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { getTraitDisplayLabel } from "@/components/dashboard/constants"
 import { DataTableModal } from "./DataTableModal"
 
 export type TraitDistributionBin = {
@@ -64,6 +72,15 @@ export function TraitDistributionChart({
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedBinLabel, setSelectedBinLabel] = useState<string | null>(null)
+  const displayTraitLabel = getTraitDisplayLabel(traitLabel)
+  const traitSlug = useMemo(
+    () =>
+      traitLabel
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    [traitLabel]
+  )
 
   const maxCount = Math.max(
     ...bins.flatMap((bin) => [bin.treeCount, bin.speciesCount]),
@@ -96,12 +113,12 @@ export function TraitDistributionChart({
   }, [bins, detailedData, selectedBin, selectedBinLabel])
 
   const modalTitle = selectedBinLabel
-    ? `${traitLabel}: ${selectedBinLabel}`
-    : `${traitLabel} Distribution Data`
+    ? `${displayTraitLabel}: ${selectedBinLabel}`
+    : `${displayTraitLabel} Distribution Data`
 
   const modalDescription = selectedBinLabel
     ? `Trees contributing to bin ${selectedBinLabel}`
-    : `All trees with ${traitLabel} values`
+    : `All trees with ${displayTraitLabel} values`
 
   const openBinRows = (label: string) => {
     setSelectedBinLabel(label)
@@ -146,21 +163,60 @@ export function TraitDistributionChart({
       },
       {
         accessorKey: "value",
-        header: `${traitLabel} Value`,
+        header: `${displayTraitLabel} Value`,
         cell: (info) => {
           const value = info.getValue() as number | null
           return value !== null ? value.toFixed(2) : "—"
         },
       },
     ],
-    [onPlantIdClick, traitLabel]
+    [displayTraitLabel, onPlantIdClick]
   )
 
   return (
     <div className="rounded-md border border-border p-3">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-foreground">{traitLabel}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-foreground">
+              {displayTraitLabel}
+            </p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  id={`trait-distribution-help-${traitSlug || "trait"}`}
+                  className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                >
+                  <CircleHelp className="h-3.5 w-3.5" />
+                  <span className="sr-only">Trait distribution chart help</span>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="max-w-sm whitespace-normal"
+                >
+                  <div className="space-y-1.5">
+                    <p>
+                      This chart shows how {displayTraitLabel} values are
+                      distributed across the trees currently in view.
+                    </p>
+                    <p>
+                      Each bin on the X axis is a value interval; higher peaks
+                      on the Y axis mean more observations in that interval.
+                    </p>
+                    <p>
+                      The stronger area represents tree counts, while the
+                      lighter area represents unique species counts for the same
+                      bins.
+                    </p>
+                    <p>
+                      If tree counts are much higher than species counts in a
+                      bin, that range is concentrated in fewer species.
+                    </p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-[11px] text-muted-foreground">
             Histogram range: {domainRange[0].toFixed(2)} to{" "}
             {domainRange[1].toFixed(2)}
@@ -192,7 +248,11 @@ export function TraitDistributionChart({
         </div>
       </div>
 
-      <ChartContainer config={chartConfig} className="h-52 w-full">
+      <ChartContainer
+        id={`trait-distribution-${traitSlug || "trait"}`}
+        config={chartConfig}
+        className="h-52 w-full"
+      >
         <AreaChart
           data={bins}
           margin={{ top: 12, right: 4, bottom: 0, left: -12 }}

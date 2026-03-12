@@ -11,9 +11,6 @@ export type TraitFilter = {
 }
 
 export type FilterPanelProps = {
-  filters: Array<{ id: string; label: string }>
-  selectedFilter: string
-  onSelectFilter: (id: string) => void
   activeFilterLabel: string
   speciesUseFilterGroups: Array<{
     id: string
@@ -40,9 +37,6 @@ export type FilterPanelProps = {
 }
 
 export function FilterPanel({
-  filters,
-  selectedFilter,
-  onSelectFilter,
   activeFilterLabel,
   speciesUseFilterGroups,
   selectedUseFilters,

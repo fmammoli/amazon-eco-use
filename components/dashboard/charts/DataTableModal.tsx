@@ -98,7 +98,10 @@ export function DataTableModal<TData, TValue>({
     const exportColumns = table.getAllLeafColumns()
     const exportRows = table.getSortedRowModel().rows
 
-    const headers = ["#", ...exportColumns.map((column) => getColumnHeader(column.id))]
+    const headers = [
+      "#",
+      ...exportColumns.map((column) => getColumnHeader(column.id)),
+    ]
     const csvLines = [headers.map(toCsvCell).join(",")]
 
     exportRows.forEach((row, index) => {
