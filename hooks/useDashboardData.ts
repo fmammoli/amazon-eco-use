@@ -230,7 +230,7 @@ export function useDashboardData() {
   const filteredData = useMemo(() => {
     if (!geojson) return null
 
-    const filteredFeatures = geojson.features.filter((feature) => {
+    const filteredFeatures = geojson.features.flatMap((feature) => {
       const props = feature.properties as Record<string, unknown> | null
 
       const speciesName = props
@@ -249,19 +249,31 @@ export function useDashboardData() {
       )
 
       const passesUseFilter = hasSelectedUse || (showNoUse && !speciesHasAnyUse)
-      if (!passesUseFilter) return false
+      if (!passesUseFilter) return []
 
-      if (traitFilters.length === 0) return true
+      if (traitFilters.length > 0) {
+        const passesTraits = traitFilters.every((filter) => {
+          const value = props ? props[filter.trait] : undefined
 
-      return traitFilters.every((filter) => {
-        const value = props ? props[filter.trait] : undefined
+          if (typeof value !== "number" || !Number.isFinite(value)) {
+            return includeMissing
+          }
 
-        if (typeof value !== "number" || !Number.isFinite(value)) {
-          return includeMissing
-        }
+          return value >= filter.range[0] && value <= filter.range[1]
+        })
 
-        return value >= filter.range[0] && value <= filter.range[1]
-      })
+        if (!passesTraits) return []
+      }
+
+      const enrichedFeature: GeoJSON.Feature = {
+        ...feature,
+        properties: {
+          ...(props ?? {}),
+          has_any_use: speciesHasAnyUse ? 1 : 0,
+        },
+      }
+
+      return [enrichedFeature]
     })
 
     return {

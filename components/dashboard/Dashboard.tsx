@@ -1,8 +1,13 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { CircleHelp } from "lucide-react"
+import {
+  RankAbundanceChart,
+  type RankAbundanceTreeRow,
+} from "@/components/RankAbundanceChart"
 import { FilterPanel } from "@/components/dashboard/FilterPanel"
 import { MapView } from "@/components/dashboard/MapView"
 import { PlantDetailsDrawer } from "@/components/dashboard/PlantDetailsDrawer"
@@ -24,8 +29,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useDashboardData } from "@/hooks/useDashboardData"
+import { computeSpeciesAbundance } from "@/lib/computeSpeciesAbundance"
 
 export function Dashboard() {
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
   const {
     activeFilterLabel,
     selectedUseFilters,
@@ -132,6 +141,75 @@ export function Dashboard() {
       )
   }, [filteredData?.features, speciesMetadataByName, speciesStudyWithScores])
 
+  const rankAbundanceTask5Data = useMemo(
+    () =>
+      computeSpeciesAbundance(
+        filteredData?.features,
+        speciesMetadataByName,
+        "task5"
+      ),
+    [filteredData?.features, speciesMetadataByName]
+  )
+
+  const rankAbundanceCoelhoData = useMemo(
+    () =>
+      computeSpeciesAbundance(
+        filteredData?.features,
+        speciesMetadataByName,
+        "coelho"
+      ),
+    [filteredData?.features, speciesMetadataByName]
+  )
+
+  const rankAbundanceTreeRows = useMemo<RankAbundanceTreeRow[]>(() => {
+    if (!filteredData?.features) return []
+
+    return filteredData.features.map((feature, index) => {
+      const props = feature.properties as Record<string, unknown> | null
+      const fallbackPlantId = feature.id ?? index + 1
+
+      return {
+        plant_id:
+          (props?.["plant_id"] as string | number | undefined) ??
+          fallbackPlantId,
+        species_name:
+          typeof props?.["species_name"] === "string"
+            ? props["species_name"]
+            : "Unknown",
+        family:
+          typeof props?.["Family"] === "string"
+            ? props["Family"]
+            : typeof props?.["gbif_family"] === "string"
+              ? props["gbif_family"]
+              : "-",
+        height:
+          typeof props?.["Height"] === "number" &&
+          Number.isFinite(props["Height"])
+            ? props["Height"]
+            : null,
+        dbh_2022:
+          typeof props?.["DBH_2022"] === "number" &&
+          Number.isFinite(props["DBH_2022"])
+            ? props["DBH_2022"]
+            : null,
+      }
+    })
+  }, [filteredData?.features])
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return
+
+    setIsLoggingOut(true)
+
+    try {
+      await fetch("/api/logout", { method: "POST" })
+    } finally {
+      router.replace("/login")
+      router.refresh()
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <>
       <PlantDetailsDrawer
@@ -144,7 +222,15 @@ export function Dashboard() {
       <main className="min-h-screen bg-background px-4 py-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-dvw gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-[auto_1fr]">
           <section className="col-span-full lg:col-span-2">
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="inline-flex items-center rounded-md border border-border bg-input/30 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-input/50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </button>
               <Link
                 href="/about"
                 className="inline-flex items-center rounded-md border border-border bg-input/30 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-input/50"
@@ -190,6 +276,30 @@ export function Dashboard() {
             </header>
 
             <MapView data={filteredData} onFeatureClick={handleFeatureClick} />
+          </section>
+
+          <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold">
+                  Species Rank-Abundance Curve
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  This chart ranks species by abundance in the experimental
+                  plots. Point color indicates primary ethnobotanical use and
+                  point shape indicates single vs multiple uses.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <RankAbundanceChart
+                task5Data={rankAbundanceTask5Data}
+                coelhoData={rankAbundanceCoelhoData}
+                treeRows={rankAbundanceTreeRows}
+                onPlantIdClick={openPlantById}
+              />
+            </div>
           </section>
 
           <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">

@@ -1,5 +1,6 @@
 "use client"
 
+import speciesReferences from "@/public/data/species_references_by_species.json"
 import {
   Drawer,
   DrawerClose,
@@ -22,6 +23,7 @@ import {
   type KeyValueRow,
 } from "@/components/dashboard/plant-details-drawer/KeyValueList"
 import { SectionCard } from "@/components/dashboard/plant-details-drawer/SectionCard"
+import { normalizeSpeciesName } from "@/components/dashboard/utils"
 
 const coelhoUseFields = [
   { key: "Food", label: "Food", referenceKey: "Reference of food" },
@@ -70,6 +72,16 @@ const task5PlantPartKeys = [
 ] as const
 
 type UnknownRecord = Record<string, unknown>
+type SpeciesReferenceEntry = {
+  reference: string
+  webpage?: string
+}
+
+const speciesReferencesIndex = new Map<string, SpeciesReferenceEntry[]>(
+  Object.entries(
+    speciesReferences as Record<string, SpeciesReferenceEntry[]>
+  ).map(([species, references]) => [normalizeSpeciesName(species), references])
+)
 
 const notNull = <T,>(value: T | null): value is T => value !== null
 
@@ -268,6 +280,12 @@ export function PlantDetailsDrawer({
     speciesInfo?.species_name && !hasSpeciesMetadata
   )
 
+  const speciesReferenceEntries = speciesInfo?.species_name
+    ? (speciesReferencesIndex.get(
+        normalizeSpeciesName(speciesInfo.species_name)
+      ) ?? [])
+    : []
+
   const speciesRows: KeyValueRow[] = [
     speciesInfo?.species_name
       ? { label: "Full Name", value: speciesInfo.species_name }
@@ -431,16 +449,16 @@ export function PlantDetailsDrawer({
       <DrawerContent className="flex h-full max-h-screen flex-col overflow-hidden">
         <DrawerHeader className="shrink-0">
           <DrawerTitle>Plant details</DrawerTitle>
-          <DrawerDescription>
+          <DrawerDescription className="select-text">
             Click a point on the map to view its raw properties.
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 select-text">
           {selectedFeatureProps ? (
             <div className="space-y-3">
               <SectionCard title="Geometry">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground select-text">
                   {selectedFeature?.geometry?.type}
                   {selectedFeature?.geometry?.type === "Point" &&
                   Array.isArray(selectedFeature.geometry?.coordinates)
@@ -457,7 +475,7 @@ export function PlantDetailsDrawer({
 
               {shouldShowMissingMetadataNote ? (
                 <div className="rounded-md border border-dashed border-border bg-muted/40 p-3">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground select-text">
                     No matching species metadata was found for this plant in the
                     species reference JSON.
                   </p>
@@ -497,6 +515,33 @@ export function PlantDetailsDrawer({
                 </SectionCard>
               ) : null}
 
+              {speciesReferenceEntries.length > 0 ? (
+                <SectionCard title="Species References">
+                  <ol className="space-y-3 pl-4">
+                    {speciesReferenceEntries.map((entry, index) => (
+                      <li
+                        key={`${entry.reference}-${index}`}
+                        className="space-y-1"
+                      >
+                        <p className="text-xs wrap-break-word text-muted-foreground select-text">
+                          {entry.reference}
+                        </p>
+                        {entry.webpage ? (
+                          <a
+                            href={entry.webpage}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex text-xs break-all text-primary underline underline-offset-2 hover:opacity-80"
+                          >
+                            {entry.webpage}
+                          </a>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ol>
+                </SectionCard>
+              ) : null}
+
               {gbifRows.length > 0 ? (
                 <SectionCard title="GBIF Information">
                   <KeyValueList rows={gbifRows} />
@@ -531,7 +576,7 @@ export function PlantDetailsDrawer({
               ) : null}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground select-text">
               Click a point on the map to view details.
             </p>
           )}

@@ -7,7 +7,7 @@ export type HoverInfo = {
   lngLat: [number, number]
 }
 
-export function useDebouncedHover(delay = 50) {
+export function useDebouncedHover(delay = 20) {
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null)
   const debounceRef = useRef<number | null>(null)
 

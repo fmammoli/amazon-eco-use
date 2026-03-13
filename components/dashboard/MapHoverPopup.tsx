@@ -14,7 +14,20 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
     string,
     unknown
   >
-  const hiddenHoverFields = new Set(["task5_use", "coelho_arboreal_uses"])
+
+  const plantId = properties["plant_id"] ?? hoverInfo.feature.id ?? "-"
+  const speciesName = properties["species_name"] ?? "-"
+  const family = properties["Family"] ?? properties["gbif_family"] ?? "-"
+  const height = properties["HEIGHT"] ?? "-"
+  const dbh2022 = properties["DBH_2022"] ?? "-"
+
+  const hoverRows = [
+    { label: "Plant ID", value: plantId },
+    { label: "Species Name", value: speciesName },
+    { label: "Family", value: family },
+    { label: "Height", value: height },
+    { label: "DBH 2022", value: dbh2022 },
+  ]
 
   return (
     <Popup
@@ -28,17 +41,16 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
       <div className="max-w-xs text-xs">
         <div className="font-semibold">Plant info</div>
         <div className="mt-1 space-y-0.5">
-          {Object.entries(properties)
-            .filter(([key]) => !hiddenHoverFields.has(key))
-            .slice(0, 10)
-            .map(([key, value]) => (
-              <div key={key} className="flex justify-between">
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {key}
-                </span>
-                <span className="ml-2 text-[11px]">{String(value)}</span>
-              </div>
-            ))}
+          {hoverRows.map((row) => (
+            <div key={row.label} className="flex justify-between gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {row.label}
+              </span>
+              <span className="text-right text-[11px]">
+                {String(row.value)}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </Popup>
