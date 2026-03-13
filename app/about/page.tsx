@@ -9,11 +9,11 @@ export default function AboutPage() {
             About this project
           </h1>
           <p className="text-sm text-muted-foreground">
-            This dashboard is an analytical environment for investigating links
-            between Amazonian forest composition, functional traits, and
-            ethnobotanical knowledge. It integrates individual-level ecological
-            observations with species-level use and reference data to support
-            exploratory analyses at the biodiversity-society interface.
+            This dashboard is an environment for investigating links between
+            Amazonian forest composition, functional traits, and ethnobotanical
+            knowledge. It integrates individual-level ecological observations
+            with species-level use and reference data to support exploratory
+            analyses at the biodiversity-society interface.
           </p>
         </header>
 
@@ -50,27 +50,28 @@ export default function AboutPage() {
               in this dashboard derive from AmazonFACE research activities.
             </p>
             <p>
-              The ethnobotanical dataset identified here as coelho_arboreal_use
-              is based on the study described in Metadata_trees_palms_uses.pdf
-              (associated with the article Eighty-four per cent of all Amazonian
-              arboreal individuals are useful to humans). As described in that
-              metadata document, use information was synthesized from a
-              literature review of 29 ethnobotanical studies across Amazonia and
-              harmonized at species level for trees and palms. The dataset
-              organizes evidence into six principal categories: Food, Medicine,
-              Manufacture, Construction, Thatching, and Firewood, with
-              category-specific reference fields documenting supporting sources.
-              In this metadata framework, NA indicates that no use information
-              was found in the reviewed literature for that field.
+              Ethnobotanical data identified in this project as task5_use were
+              compiled by AmazonFACE researchers Beatriz Tristão and Moara
+              Canova. The species-level reference information used in this
+              dashboard also comes from their curation. Their data were further
+              enriched with GBIF and iNaturalist information, with iNaturalist
+              data used in particular to expand photographic documentation of
+              species.
             </p>
             <p>
-              Additional ethnobotanical data identified in this project as
-              task5_use were compiled by AmazonFACE researchers Beatriz Tristao
-              and Moara Canova. The species-level reference information used in
-              this dashboard also comes from their curation. Their data were
-              further enriched with GBIF and iNaturalist information, with
-              iNaturalist data used in particular to expand photographic
-              documentation of species.
+              Additional ethnobotanical data identified here as
+              coelho_arboreal_use is based on the study{" "}
+              <Link href={"https://doi.org/10.1371/journal.pone.0257875"}>
+                Coelho et al. (2021) `&apos;`Eighty-four per cent of all
+                Amazonian arboreal plant individuals are useful to
+                humans`&apos;`
+              </Link>
+              Their dataset is a synthesis from a literature review of 29
+              ethnobotanical studies across Amazonia and harmonized at species
+              level for trees and palms. The dataset organizes evidence into six
+              principal categories: Food, Medicine, Manufacture, Construction,
+              Thatching, and Firewood, with category-specific reference fields
+              documenting supporting sources.
             </p>
           </div>
         </section>

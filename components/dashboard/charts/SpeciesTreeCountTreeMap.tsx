@@ -75,12 +75,10 @@ const CustomTreeMapContent = (props: any) => {
         y={y}
         width={width}
         height={height}
-        style={{
-          fill: props.fill,
-          stroke: "rgba(255,255,255,0.82)",
-          strokeWidth: 1,
-          opacity: 0.9,
-        }}
+        fill={props.fill}
+        stroke="rgba(255,255,255,0.82)"
+        strokeWidth={1}
+        opacity={0.9}
       />
       {showBothLines ? (
         <>
@@ -148,20 +146,12 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
       typeof data.referenceCount === "number" ? data.referenceCount : 0
 
     return (
-      <div
-        style={{
-          backgroundColor: "#fff",
-          padding: "12px",
-          border: "1px solid #ccc",
-          borderRadius: "6px",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-        }}
-      >
-        <p style={{ margin: "0 0 4px 0", fontWeight: "600" }}>{speciesName}</p>
-        <p style={{ margin: "0 0 2px 0", fontSize: "12px" }}>
+      <div className="rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">
+        <p className="mb-1 text-sm font-semibold">{speciesName}</p>
+        <p className="text-xs">
           <strong>Trees in Plot:</strong> {treeCount}
         </p>
-        <p style={{ margin: "0 0 2px 0", fontSize: "12px" }}>
+        <p className="text-xs">
           <strong>References:</strong> {referenceCount}
         </p>
       </div>
@@ -239,15 +229,7 @@ export function SpeciesTreeCountTreeMap({
 
   if (treemapData.length === 0) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: 320,
-          color: "#9ca3af",
-        }}
-      >
+      <div className="flex h-80 items-center justify-center text-muted-foreground">
         No data to display
       </div>
     )
@@ -265,11 +247,7 @@ export function SpeciesTreeCountTreeMap({
         <span>Total trees: {totalTrees}</span>
       </div>
 
-      <ResponsiveContainer
-        width="100%"
-        height={chartHeight}
-        style={{ backgroundColor: "transparent" }}
-      >
+      <ResponsiveContainer width="100%" height={chartHeight}>
         <Treemap
           data={treemapData}
           dataKey="value"
@@ -280,14 +258,7 @@ export function SpeciesTreeCountTreeMap({
           <Tooltip content={<CustomTooltip />} />
         </Treemap>
       </ResponsiveContainer>
-      <p
-        style={{
-          marginTop: "8px",
-          fontSize: "11px",
-          fontStyle: "italic",
-          color: "#6b7280",
-        }}
-      >
+      <p className="mt-2 text-[11px] text-muted-foreground italic">
         {chartCaption}
       </p>
     </div>

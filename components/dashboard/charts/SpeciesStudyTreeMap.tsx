@@ -89,12 +89,10 @@ const CustomTreeMapContent = ({
         y={y}
         width={width}
         height={height}
-        style={{
-          fill,
-          stroke: "rgba(255,255,255,0.82)",
-          strokeWidth: 1,
-          opacity: 0.9,
-        }}
+        fill={fill}
+        stroke="rgba(255,255,255,0.82)"
+        strokeWidth={1}
+        opacity={0.9}
       />
       {showBothLines ? (
         <>
@@ -162,23 +160,15 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     const treeCount = typeof data.treeCount === "number" ? data.treeCount : 0
 
     return (
-      <div
-        style={{
-          backgroundColor: "#fff",
-          padding: "12px",
-          border: "1px solid #ccc",
-          borderRadius: "6px",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-        }}
-      >
-        <p style={{ margin: "0 0 4px 0", fontWeight: "600" }}>{speciesName}</p>
-        <p style={{ margin: "0 0 2px 0", fontSize: "12px" }}>
+      <div className="rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">
+        <p className="mb-1 text-sm font-semibold">{speciesName}</p>
+        <p className="text-xs">
           <strong>Study Score:</strong> {score.toFixed(1)}
         </p>
-        <p style={{ margin: "0 0 2px 0", fontSize: "12px" }}>
+        <p className="text-xs">
           <strong>References:</strong> {referenceCount}
         </p>
-        <p style={{ margin: "0 0 2px 0", fontSize: "12px" }}>
+        <p className="text-xs">
           <strong>Trees in Plot:</strong> {treeCount}
         </p>
       </div>
@@ -263,15 +253,7 @@ export function SpeciesStudyTreeMap({
 
   if (treemapData.length === 0) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: 320,
-          color: "#9ca3af",
-        }}
-      >
+      <div className="flex h-80 items-center justify-center text-muted-foreground">
         No studied species data available
       </div>
     )
@@ -284,11 +266,7 @@ export function SpeciesStudyTreeMap({
         <span>Total references: {totalReferences}</span>
       </div>
 
-      <ResponsiveContainer
-        width="100%"
-        height={chartHeight}
-        style={{ backgroundColor: "transparent" }}
-      >
+      <ResponsiveContainer width="100%" height={chartHeight}>
         <Treemap
           data={treemapData}
           dataKey="value"

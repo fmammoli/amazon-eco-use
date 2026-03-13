@@ -1,6 +1,13 @@
 "use client"
 
+import { CircleHelp } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export type TraitDomains = Record<string, [number, number]>
 
@@ -77,7 +84,40 @@ export function FilterPanel({
             onChange={onToggleIncludeMissing}
             className="h-4 w-4 rounded border border-input bg-background text-primary focus:ring-primary"
           />
-          <span>Include missing values</span>
+          <span className="inline-flex items-center gap-1.5">
+            Include missing values
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  type="button"
+                  className="inline-flex items-center rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                  aria-label="Include missing values help"
+                  onClick={(event) => event.preventDefault()}
+                >
+                  <CircleHelp className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="max-w-sm whitespace-normal"
+                >
+                  <div className="space-y-1.5 text-xs">
+                    <p>
+                      This option controls how filters treat missing values in
+                      tree-level attributes from the GeoJSON records.
+                    </p>
+                    <p>
+                      When enabled, trees with null or absent trait/property
+                      values in the GeoJSON are kept in the filtered results.
+                    </p>
+                    <p>
+                      When disabled, those trees are excluded whenever the
+                      active filter requires that missing value.
+                    </p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </span>
         </label>
       </div>
 
@@ -92,7 +132,41 @@ export function FilterPanel({
             onChange={onToggleShowNoUse}
             className="h-4 w-4 rounded border border-input bg-background text-primary focus:ring-primary"
           />
-          <span>Show trees with no use</span>
+          <span className="inline-flex items-center gap-1.5">
+            Show trees with no use
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  type="button"
+                  className="inline-flex items-center rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                  aria-label="Show trees with no use help"
+                  onClick={(event) => event.preventDefault()}
+                >
+                  <CircleHelp className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="max-w-sm whitespace-normal"
+                >
+                  <div className="space-y-1.5 text-xs">
+                    <p>
+                      This option controls whether trees are kept when their
+                      species has no ethnobotanical-use assignment.
+                    </p>
+                    <p>
+                      Tree occurrences come from the GeoJSON, while use labels
+                      are matched from the species metadata JSON.
+                    </p>
+                    <p>
+                      If no use record is found for a species (missing, null, or
+                      unmatched), those trees are included only when this is
+                      enabled.
+                    </p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </span>
         </label>
 
         <div className="space-y-3">

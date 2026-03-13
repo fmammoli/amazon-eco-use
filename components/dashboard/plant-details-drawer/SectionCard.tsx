@@ -9,8 +9,8 @@ export function SectionCard({
 }) {
   return (
     <div className="rounded-md border border-border bg-background p-3">
-      <h3 className="text-xs font-semibold">{title}</h3>
-      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+      <h3 className="text-xs font-semibold select-text">{title}</h3>
+      <div className="mt-2 space-y-1 text-xs text-muted-foreground select-text">
         {children}
       </div>
     </div>
