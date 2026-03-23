@@ -283,7 +283,7 @@ export function RankAbundanceChart({
                 : "text-muted-foreground hover:bg-accent"
             }`}
           >
-            Task 5 use
+            Tristão and Canova (2025)
           </button>
           <button
             type="button"
@@ -294,7 +294,7 @@ export function RankAbundanceChart({
                 : "text-muted-foreground hover:bg-accent"
             }`}
           >
-            Coelho arboreal use
+            Coelho et al. (2021)
           </button>
         </div>
       </div>

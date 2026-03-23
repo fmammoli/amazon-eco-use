@@ -3,7 +3,7 @@ import type { SpeciesUseFilterGroup } from "@/components/dashboard/types"
 export const speciesUseFilterGroups: SpeciesUseFilterGroup[] = [
   {
     id: "task5",
-    label: "Task 5 Uses",
+    label: "Tristão and Canova (2025)",
     filters: [
       { id: "task5-food", label: "Food" },
       { id: "task5-medicinal", label: "Medicinal" },
@@ -12,7 +12,7 @@ export const speciesUseFilterGroups: SpeciesUseFilterGroup[] = [
   },
   {
     id: "coelho",
-    label: "Coelho Arboreal Uses",
+    label: "Coelho et al. (2021)",
     filters: [
       { id: "coelho-food", label: "Food" },
       { id: "coelho-medicine", label: "Medicine" },

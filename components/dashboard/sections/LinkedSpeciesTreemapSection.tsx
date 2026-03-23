@@ -66,7 +66,7 @@ export const LinkedSpeciesTreemapSection = memo(
       <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
           <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <h3>Scientific Attention (Task 5 Use)</h3>
+            <h3>Scientific Attention (Tristão and Canova, 2025)</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger
@@ -89,9 +89,9 @@ export const LinkedSpeciesTreemapSection = memo(
                       (higher references = darker tone).
                     </p>
                     <p>
-                      Task 5 use information in this section is based on data
-                      collected by AmazonFACE Task 5 researchers Beatriz Tristão
-                      and Moara Canova.
+                      Tristao and Canova (2025) information in this section is
+                      based on data collected by AmazonFACE Task 5 researchers
+                      Beatriz Tristão and Moara Canova.
                     </p>
                     <p>
                       Source data: filtered trees from
@@ -132,12 +132,13 @@ export const LinkedSpeciesTreemapSection = memo(
                       more individual trees in the filtered plot.
                     </p>
                     <p>
-                      Colors indicate Task 5 use context at species level and
-                      keep visual consistency with other charts.
+                      Colors indicate Tristao and Canova (2025) context at
+                      species level and keep visual consistency with other
+                      charts.
                     </p>
                     <p>
-                      Task 5 species-use information is from AmazonFACE
-                      researchers Beatriz Tristao and Moara Canova.
+                      Tristao and Canova (2025) species-use information is from
+                      AmazonFACE researchers Beatriz Tristao and Moara Canova.
                     </p>
                     <p>
                       Source data: tree counts from
