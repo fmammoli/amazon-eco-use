@@ -19,6 +19,12 @@ interface SpeciesTreeCountTreeMapProps {
     score: number
   }>
   maxTreeCount: number
+  hoveredSpecies?: string | null
+  onHoverSpecies?: (species: string | null) => void
+}
+
+function normalizeSpecies(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase()
 }
 
 function getColorByTreeCount(count: number, maxCount: number): string {
@@ -49,7 +55,23 @@ const CustomTreeMapContent = (props: any) => {
     ? rawName.split(" ").slice(0, 2).join(" ")
     : "Unknown species"
 
-  if (width < 22 || height < 18) return null
+  const hoveredSpecies =
+    typeof props?.hoveredSpecies === "string" ? props.hoveredSpecies : null
+
+  const normalizedCurrent = normalizeSpecies(rawName)
+  const normalizedHovered = normalizeSpecies(hoveredSpecies)
+  const isHoverLinked =
+    normalizedHovered.length > 0 &&
+    normalizedCurrent === normalizedHovered &&
+    !rawName.startsWith("Other (")
+  const onHoverSpecies =
+    typeof props?.onHoverSpecies === "function"
+      ? (props.onHoverSpecies as (species: string | null) => void)
+      : undefined
+  const hoverTargetSpecies =
+    rawName.length > 0 && !rawName.startsWith("Other (") ? rawName : null
+
+  if (width <= 1 || height <= 1) return null
 
   // Use very soft, light text for better readability on darker backgrounds
   const textColor = "#f3f4f6"
@@ -59,7 +81,8 @@ const CustomTreeMapContent = (props: any) => {
   const line1 = nameParts[0] || ""
   const line2 = nameParts.slice(1).join(" ") || ""
 
-  // Responsive display based on tile size
+  // Responsive label display based on tile size.
+  // The tile itself should always render to avoid blank chart areas.
   const showBothLines = width >= 60 && height >= 50
   const showFirstLineOnly = width >= 38 && height >= 28
 
@@ -69,16 +92,20 @@ const CustomTreeMapContent = (props: any) => {
   if (width >= 100) fontSize = 14
 
   return (
-    <g>
+    <g
+      onMouseEnter={() => {
+        onHoverSpecies?.(hoverTargetSpecies)
+      }}
+    >
       <rect
         x={x}
         y={y}
         width={width}
         height={height}
         fill={props.fill}
-        stroke="rgba(255,255,255,0.82)"
-        strokeWidth={1}
-        opacity={0.9}
+        stroke={isHoverLinked ? "#f59e0b" : "rgba(255,255,255,0.82)"}
+        strokeWidth={isHoverLinked ? 2.2 : 1}
+        opacity={isHoverLinked ? 1 : 0.9}
       />
       {showBothLines ? (
         <>
@@ -122,6 +149,47 @@ const CustomTreeMapContent = (props: any) => {
           {line1}
         </text>
       ) : null}
+
+      {isHoverLinked && payload ? (
+        <g pointerEvents="none">
+          <rect
+            x={Math.max(2, x + 4)}
+            y={Math.max(2, y - 46)}
+            width={168}
+            height={42}
+            rx={6}
+            ry={6}
+            fill="rgba(9,9,11,0.96)"
+            stroke="rgba(255,255,255,0.7)"
+            strokeWidth={1}
+          />
+          <text
+            x={Math.max(8, x + 8)}
+            y={Math.max(15, y - 32)}
+            fill="#f8fafc"
+            fontSize={11}
+            fontWeight={600}
+          >
+            {String(payload.name ?? "Unknown species")}
+          </text>
+          <text
+            x={Math.max(8, x + 8)}
+            y={Math.max(15, y - 20)}
+            fill="#e5e7eb"
+            fontSize={10}
+          >
+            {`Trees in Plot: ${typeof payload.treeCount === "number" ? payload.treeCount : 0}`}
+          </text>
+          <text
+            x={Math.max(8, x + 8)}
+            y={Math.max(15, y - 8)}
+            fill="#e5e7eb"
+            fontSize={10}
+          >
+            {`References: ${typeof payload.referenceCount === "number" ? payload.referenceCount : 0}`}
+          </text>
+        </g>
+      ) : null}
     </g>
   )
 }
@@ -164,6 +232,8 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 export function SpeciesTreeCountTreeMap({
   data,
   maxTreeCount,
+  hoveredSpecies = null,
+  onHoverSpecies,
 }: SpeciesTreeCountTreeMapProps) {
   const { treemapData, collapsedSpeciesCount, collapsedTreeCount } =
     useMemo(() => {
@@ -171,7 +241,7 @@ export function SpeciesTreeCountTreeMap({
         .filter((d) => d.treeCount > 0)
         .sort((a, b) => b.treeCount - a.treeCount)
 
-      const MAX_SPECIES = 60
+      const MAX_SPECIES = 200
       const visible = rankedData.slice(0, MAX_SPECIES)
       const collapsed = rankedData.slice(MAX_SPECIES)
 
@@ -247,17 +317,29 @@ export function SpeciesTreeCountTreeMap({
         <span>Total trees: {totalTrees}</span>
       </div>
 
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <Treemap
-          data={treemapData}
-          dataKey="value"
-          stroke="#fff"
-          fill="#09090b"
-          content={<CustomTreeMapContent />}
-        >
-          <Tooltip content={<CustomTooltip />} />
-        </Treemap>
-      </ResponsiveContainer>
+      <div
+        className="relative"
+        onMouseLeave={() => {
+          onHoverSpecies?.(null)
+        }}
+      >
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <Treemap
+            data={treemapData}
+            dataKey="value"
+            stroke="#fff"
+            fill="#09090b"
+            content={
+              <CustomTreeMapContent
+                hoveredSpecies={hoveredSpecies}
+                onHoverSpecies={onHoverSpecies}
+              />
+            }
+          >
+            <Tooltip content={<CustomTooltip />} isAnimationActive={false} />
+          </Treemap>
+        </ResponsiveContainer>
+      </div>
       <p className="mt-2 text-[11px] text-muted-foreground italic">
         {chartCaption}
       </p>

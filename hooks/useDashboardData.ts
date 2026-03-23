@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react"
 
-import { allFilterIds, filters } from "@/components/dashboard/constants"
+import {
+  allFilterIds,
+  filters,
+  speciesUseFilterGroups,
+} from "@/components/dashboard/constants"
 import {
   hasSpeciesUse,
   mergeSpeciesMetadataIntoProps,
@@ -26,7 +30,7 @@ export function useDashboardData() {
   const [selectedUseFilters, setSelectedUseFilters] =
     useState<string[]>(allFilterIds)
   const [includeMissing, setIncludeMissing] = useState(true)
-  const [showNoUse, setShowNoUse] = useState(false)
+  const [showNoUse, setShowNoUse] = useState(true)
   const [selectedFeature, setSelectedFeature] =
     useState<GeoJSON.Feature | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -268,8 +272,13 @@ export function useDashboardData() {
       const enrichedFeature: GeoJSON.Feature = {
         ...feature,
         properties: {
-          ...(props ?? {}),
-          has_any_use: speciesHasAnyUse ? 1 : 0,
+          ...mergeSpeciesMetadataIntoProps(
+            {
+              ...(props ?? {}),
+              has_any_use: speciesHasAnyUse ? 1 : 0,
+            },
+            metadata
+          ),
         },
       }
 
@@ -320,6 +329,24 @@ export function useDashboardData() {
     )
   }
 
+  const toggleSpeciesUseFilterGroup = (
+    groupId: string,
+    shouldSelect: boolean
+  ) => {
+    const group = speciesUseFilterGroups.find((entry) => entry.id === groupId)
+    if (!group) return
+
+    const groupFilterIds = group.filters.map((filter) => filter.id)
+
+    setSelectedUseFilters((prev) => {
+      if (shouldSelect) {
+        return Array.from(new Set([...prev, ...groupFilterIds]))
+      }
+
+      return prev.filter((id) => !groupFilterIds.includes(id))
+    })
+  }
+
   const addTraitFilter = () => {
     const nextTrait = numericTraits[0]
     if (!nextTrait) return
@@ -355,7 +382,7 @@ export function useDashboardData() {
   const resetFilters = () => {
     setSelectedFilter("all")
     setSelectedUseFilters(allFilterIds)
-    setShowNoUse(false)
+    setShowNoUse(true)
     setIncludeMissing(true)
 
     const firstTrait = numericTraits[0]
@@ -381,6 +408,7 @@ export function useDashboardData() {
     speciesMetadataByName,
     selectedUseFilters,
     toggleSpeciesUseFilter,
+    toggleSpeciesUseFilterGroup,
     traitFilters,
     addTraitFilter,
     updateTraitFilter,

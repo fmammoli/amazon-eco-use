@@ -1,7 +1,12 @@
 "use client"
 
-import { CircleHelp } from "lucide-react"
+import { useMemo, useState } from "react"
+import { CircleHelp, Table2 } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { getTraitDisplayLabel } from "@/components/dashboard/constants"
 import { Slider } from "@/components/ui/slider"
+import { DataTableModal } from "@/components/dashboard/charts/DataTableModal"
+import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +22,20 @@ export type TraitFilter = {
   range: [number, number]
 }
 
+type FilteredTreeRow = {
+  id: string | number
+  plant_id: string | number
+  species_name: string
+  genus: string
+  family: string
+  vernacular_name: string
+  has_any_use: string
+  task5_uses: string
+  coelho_uses: string
+  height: number | null
+  dbh_2022: number | null
+}
+
 export type FilterPanelProps = {
   activeFilterLabel: string
   speciesUseFilterGroups: Array<{
@@ -26,6 +45,10 @@ export type FilterPanelProps = {
   }>
   selectedUseFilters: string[]
   onToggleSpeciesUseFilter: (id: string) => void
+  onToggleSpeciesUseFilterGroup: (
+    groupId: string,
+    shouldSelect: boolean
+  ) => void
   numericTraits: string[]
   traitDomains: TraitDomains
   traitFilters: TraitFilter[]
@@ -40,6 +63,7 @@ export type FilterPanelProps = {
   onToggleIncludeMissing: () => void
   showNoUse: boolean
   onToggleShowNoUse: () => void
+  filteredTreeRows: FilteredTreeRow[]
   onReset: () => void
 }
 
@@ -48,6 +72,7 @@ export function FilterPanel({
   speciesUseFilterGroups,
   selectedUseFilters,
   onToggleSpeciesUseFilter,
+  onToggleSpeciesUseFilterGroup,
   numericTraits,
   traitDomains,
   traitFilters,
@@ -59,8 +84,71 @@ export function FilterPanel({
   onToggleIncludeMissing,
   showNoUse,
   onToggleShowNoUse,
+  filteredTreeRows,
   onReset,
 }: FilterPanelProps) {
+  const [isFilteredTableOpen, setIsFilteredTableOpen] = useState(false)
+
+  const filteredTreeColumns = useMemo<ColumnDef<FilteredTreeRow>[]>(
+    () => [
+      {
+        accessorKey: "id",
+        header: "ID",
+      },
+      {
+        accessorKey: "plant_id",
+        header: "Plant ID",
+      },
+      {
+        accessorKey: "species_name",
+        header: "Species",
+      },
+      {
+        accessorKey: "genus",
+        header: "Genus",
+      },
+      {
+        accessorKey: "family",
+        header: "Family",
+      },
+      {
+        accessorKey: "vernacular_name",
+        header: "Vernacular",
+      },
+      {
+        accessorKey: "has_any_use",
+        header: "Has Any Use",
+      },
+      {
+        accessorKey: "task5_uses",
+        header: "Task 5 Uses",
+      },
+      {
+        accessorKey: "coelho_uses",
+        header: "Coelho Uses",
+      },
+      {
+        accessorKey: "height",
+        header: "Height",
+        cell: ({ row }) => {
+          const value = row.original.height
+          return value == null ? "-" : value.toFixed(2)
+        },
+      },
+      {
+        accessorKey: "dbh_2022",
+        header: "DBH 2022",
+        cell: ({ row }) => {
+          const value = row.original.dbh_2022
+          return value == null ? "-" : value.toFixed(2)
+        },
+      },
+    ],
+    []
+  )
+
+  const filteredCount = filteredTreeRows.length
+
   return (
     <aside className="rounded-lg border border-border bg-card/80 p-4 shadow-sm backdrop-blur-xl">
       <div className="mt-4 flex flex-col gap-2">
@@ -172,9 +260,88 @@ export function FilterPanel({
         <div className="space-y-3">
           {speciesUseFilterGroups.map((group) => (
             <div key={group.id} className="space-y-2">
-              <p className="text-[11px] font-medium text-muted-foreground">
-                {group.label}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="inline-flex items-center gap-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground">
+                    {group.label}
+                  </p>
+                  {group.id === "task5" ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          type="button"
+                          className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                          aria-label="Task 5 uses data source"
+                          onClick={(event) => event.preventDefault()}
+                        >
+                          <CircleHelp className="h-3.5 w-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="right"
+                          className="max-w-sm whitespace-normal"
+                        >
+                          <p className="text-xs">
+                            These data were collected by researchers Beatriz
+                            Tristao and Moara Canova from the AmazonFACE Task 5
+                            group.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
+                  {group.id === "coelho" ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          type="button"
+                          className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                          aria-label="Coelho arboreal uses data source"
+                          onClick={(event) => event.preventDefault()}
+                        >
+                          <CircleHelp className="h-3.5 w-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="right"
+                          className="max-w-md whitespace-normal"
+                        >
+                          <p className="text-xs">
+                            Coelho, S. D., Levis, C., Baccaro, F. B.,
+                            Figueiredo, F. O. G., Antunes, A. P., ter Steege,
+                            H., Pena-Claros, M., Clement, C. R., &amp; Schietti,
+                            J. (2021). Eighty-four per cent of all Amazonian
+                            arboreal plant individuals are useful to humans.
+                            PLOS ONE, 16(10), e0257875.
+                          </p>
+                          <a
+                            href="https://doi.org/10.1371/journal.pone.0257875"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-block text-xs underline underline-offset-2"
+                          >
+                            https://doi.org/10.1371/journal.pone.0257875
+                          </a>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
+                </div>
+                <label className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={group.filters.every((filter) =>
+                      selectedUseFilters.includes(filter.id)
+                    )}
+                    onChange={(event) =>
+                      onToggleSpeciesUseFilterGroup(
+                        group.id,
+                        event.target.checked
+                      )
+                    }
+                    className="h-4 w-4 rounded border border-input bg-background text-primary focus:ring-primary"
+                  />
+                  <span>All</span>
+                </label>
+              </div>
               <div className="grid grid-cols-1 gap-2">
                 {group.filters.map((useFilter) => (
                   <label
@@ -233,7 +400,7 @@ export function FilterPanel({
                     >
                       {numericTraits.map((trait) => (
                         <option key={trait} value={trait}>
-                          {trait}
+                          {getTraitDisplayLabel(trait)}
                         </option>
                       ))}
                     </select>
@@ -249,7 +416,7 @@ export function FilterPanel({
                   {domain ? (
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{filter.trait} range</span>
+                        <span>{getTraitDisplayLabel(filter.trait)} range</span>
                         <span>
                           {filter.range[0].toFixed(2)} –{" "}
                           {filter.range[1].toFixed(2)}
@@ -281,6 +448,33 @@ export function FilterPanel({
           </div>
         </div>
       ) : null}
+
+      <div className="mt-4 border-t border-border pt-3">
+        <Button
+          type="button"
+          size="lg"
+          onClick={() => setIsFilteredTableOpen(true)}
+          className="w-full justify-between rounded-lg border-emerald-300/35 bg-linear-to-r from-emerald-500 to-cyan-500 text-white shadow-sm transition-all hover:from-emerald-400 hover:to-cyan-400 hover:shadow-md"
+        >
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold">
+            <Table2 className="h-3.5 w-3.5" />
+            View Filtered Results
+          </span>
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">
+            {filteredCount}
+          </span>
+        </Button>
+
+        <DataTableModal
+          data={filteredTreeRows}
+          columns={filteredTreeColumns}
+          title="Filtered Trees"
+          description="All trees matching the current filters."
+          open={isFilteredTableOpen}
+          onOpenChange={setIsFilteredTableOpen}
+          showTrigger={false}
+        />
+      </div>
     </aside>
   )
 }

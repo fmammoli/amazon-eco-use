@@ -3,13 +3,8 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CircleHelp } from "lucide-react"
-import {
-  RankAbundanceChart,
-  type RankAbundanceTreeRow,
-} from "@/components/RankAbundanceChart"
+import { type RankAbundanceTreeRow } from "@/components/RankAbundanceChart"
 import { FilterPanel } from "@/components/dashboard/FilterPanel"
-import { MapView } from "@/components/dashboard/MapView"
 import { PlantDetailsDrawer } from "@/components/dashboard/PlantDetailsDrawer"
 import { speciesUseFilterGroups } from "@/components/dashboard/constants"
 import {
@@ -18,27 +13,27 @@ import {
 } from "@/components/dashboard/utils"
 import { TraitDistributionChart } from "@/components/dashboard/charts/TraitDistributionChart"
 import { TraitUseScatterChart } from "@/components/dashboard/charts/TraitUseScatterChart"
-import { UseCategoryChart } from "@/components/dashboard/charts/UseCategoryChart"
-import { SpeciesStudyTreeMap } from "@/components/dashboard/charts/SpeciesStudyTreeMap"
-import { SpeciesTreeCountTreeMap } from "@/components/dashboard/charts/SpeciesTreeCountTreeMap"
-import { TreeCountReferenceScatterChart } from "@/components/dashboard/charts/TreeCountReferenceScatterChart"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { MapSection } from "@/components/dashboard/sections/MapSection"
+import { PlantSearchSection } from "@/components/dashboard/sections/PlantSearchSection"
+import { RankAbundanceSection } from "@/components/dashboard/sections/RankAbundanceSection"
+import { SpeciesTreemapSection } from "@/components/dashboard/sections/SpeciesTreemapSection"
+import { TreeReferenceScatterSection } from "@/components/dashboard/sections/TreeReferenceScatterSection"
+import { UsePrevalenceSection } from "@/components/dashboard/sections/UsePrevalenceSection"
 import { useDashboardData } from "@/hooks/useDashboardData"
 import { computeSpeciesAbundance } from "@/lib/computeSpeciesAbundance"
 
 export function Dashboard() {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [highlightedSpecies, setHighlightedSpecies] = useState<string | null>(
+    null
+  )
 
   const {
     activeFilterLabel,
     selectedUseFilters,
     toggleSpeciesUseFilter,
+    toggleSpeciesUseFilterGroup,
     traitFilters,
     addTraitFilter,
     updateTraitFilter,
@@ -196,6 +191,68 @@ export function Dashboard() {
     })
   }, [filteredData?.features])
 
+  const filteredTreeTableRows = useMemo(() => {
+    if (!filteredData?.features) return []
+
+    return filteredData.features.map((feature, index) => {
+      const props = feature.properties as Record<string, unknown> | null
+      const fallbackPlantId = feature.id ?? index + 1
+
+      const task5UsesRaw =
+        typeof props?.["task5_use_labels"] === "string"
+          ? props["task5_use_labels"]
+          : ""
+      const coelhoUsesRaw =
+        typeof props?.["coelho_arboreal_use_labels"] === "string"
+          ? props["coelho_arboreal_use_labels"]
+          : ""
+
+      return {
+        id:
+          (props?.["ID"] as string | number | undefined) ??
+          feature.id ??
+          index + 1,
+        plant_id:
+          (props?.["plant_id"] as string | number | undefined) ??
+          fallbackPlantId,
+        species_name:
+          typeof props?.["species_name"] === "string"
+            ? props["species_name"]
+            : "Unknown",
+        genus: typeof props?.["Genus"] === "string" ? props["Genus"] : "-",
+        family:
+          typeof props?.["Family"] === "string"
+            ? props["Family"]
+            : typeof props?.["gbif_family"] === "string"
+              ? props["gbif_family"]
+              : "-",
+        vernacular_name:
+          typeof props?.["vernacular_name"] === "string"
+            ? props["vernacular_name"]
+            : "-",
+        has_any_use:
+          props?.["has_any_use"] === 1 || props?.["has_any_use"] === "1"
+            ? "Yes"
+            : "No",
+        task5_uses: task5UsesRaw ? task5UsesRaw.split("||").join("; ") : "-",
+        coelho_uses: coelhoUsesRaw ? coelhoUsesRaw.split("||").join("; ") : "-",
+        height:
+          typeof props?.["Height"] === "number" &&
+          Number.isFinite(props["Height"])
+            ? props["Height"]
+            : typeof props?.["HEIGHT"] === "number" &&
+                Number.isFinite(props["HEIGHT"])
+              ? props["HEIGHT"]
+              : null,
+        dbh_2022:
+          typeof props?.["DBH_2022"] === "number" &&
+          Number.isFinite(props["DBH_2022"])
+            ? props["DBH_2022"]
+            : null,
+      }
+    })
+  }, [filteredData?.features])
+
   const handleLogout = async () => {
     if (isLoggingOut) return
 
@@ -222,29 +279,53 @@ export function Dashboard() {
       <main className="min-h-screen bg-background px-4 py-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-dvw gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-[auto_1fr]">
           <section className="col-span-full lg:col-span-2">
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="inline-flex items-center rounded-md border border-border bg-input/30 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-input/50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoggingOut ? "Logging out..." : "Logout"}
-              </button>
-              <Link
-                href="/about"
-                className="inline-flex items-center rounded-md border border-border bg-input/30 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-input/50"
-              >
-                About this dashboard
-              </Link>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-1">
+                <h1 className="bg-linear-to-r from-emerald-500 via-cyan-500 to-sky-500 bg-clip-text font-serif text-2xl font-semibold tracking-tight text-transparent lg:text-4xl">
+                  AmazonFACE Species Use Dashboard
+                </h1>
+                <p className="max-w-4xl text-xs text-muted-foreground lg:text-sm">
+                  Explore how plant uses in the AmazonFACE experimental rings
+                  relate to species traits, abundance, and documented knowledge.
+                </p>
+                <p className="max-w-4xl text-[11px] text-muted-foreground/90 lg:text-xs">
+                  Based on AmazonFACE Task 5 research by Beatriz Tristão and
+                  Moara Canova.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-start gap-2 lg:justify-end">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="inline-flex items-center rounded-md border border-border bg-input/30 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-input/50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLoggingOut ? "Logging out..." : "Logout"}
+                </button>
+                <Link
+                  href="/about"
+                  className="inline-flex items-center rounded-md border border-border bg-input/30 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-input/50"
+                >
+                  About this dashboard
+                </Link>
+              </div>
             </div>
           </section>
+
+          <PlantSearchSection
+            data={filteredData}
+            speciesMetadataByName={speciesMetadataByName}
+            onPlantIdClick={openPlantById}
+            onSpeciesSelect={setHighlightedSpecies}
+          />
 
           <FilterPanel
             activeFilterLabel={activeFilterLabel}
             speciesUseFilterGroups={speciesUseFilterGroups}
             selectedUseFilters={selectedUseFilters}
             onToggleSpeciesUseFilter={toggleSpeciesUseFilter}
+            onToggleSpeciesUseFilterGroup={toggleSpeciesUseFilterGroup}
             numericTraits={numericTraits}
             traitDomains={traitDomains}
             traitFilters={traitFilters}
@@ -256,243 +337,42 @@ export function Dashboard() {
             onToggleIncludeMissing={() => setIncludeMissing((prev) => !prev)}
             showNoUse={showNoUse}
             onToggleShowNoUse={() => setShowNoUse((prev) => !prev)}
+            filteredTreeRows={filteredTreeTableRows}
             onReset={resetFilters}
           />
 
-          <section className="row-span-1 rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl">
-            <header className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold">Map</h2>
-                <p className="text-xs text-muted-foreground">
-                  Showing {activeFilterLabel.toLowerCase()}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full bg-muted px-2 py-0.5">Zoom</span>
-                <span className="rounded-full bg-muted px-2 py-0.5">
-                  Layers
-                </span>
-              </div>
-            </header>
+          <MapSection
+            activeFilterLabel={activeFilterLabel}
+            data={filteredData}
+            onFeatureClick={handleFeatureClick}
+            highlightedSpecies={highlightedSpecies}
+          />
 
-            <MapView data={filteredData} onFeatureClick={handleFeatureClick} />
-          </section>
+          <RankAbundanceSection
+            task5Data={rankAbundanceTask5Data}
+            coelhoData={rankAbundanceCoelhoData}
+            treeRows={rankAbundanceTreeRows}
+            onPlantIdClick={openPlantById}
+          />
 
-          <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold">
-                  Species Rank-Abundance Curve
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  This chart ranks species by abundance in the experimental
-                  plots. Point color indicates primary ethnobotanical use and
-                  point shape indicates single vs multiple uses.
-                </p>
-              </div>
-            </div>
+          <UsePrevalenceSection
+            groups={useCategoryChartData}
+            totalTrees={filteredData?.features.length ?? 0}
+            totalSpecies={totalUniqueSpecies}
+            detailedDataByGroup={useCategoryDetailedData}
+            onPlantIdClick={openPlantById}
+          />
 
-            <div className="mt-4">
-              <RankAbundanceChart
-                task5Data={rankAbundanceTask5Data}
-                coelhoData={rankAbundanceCoelhoData}
-                treeRows={rankAbundanceTreeRows}
-                onPlantIdClick={openPlantById}
-              />
-            </div>
-          </section>
+          <SpeciesTreemapSection
+            speciesStudyWithScores={speciesStudyWithScores}
+            speciesStudyMaxScore={speciesStudyMaxScore}
+            maxTreeCount={maxTreeCount}
+          />
 
-          <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold">
-                  Species Use Prevalence
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  How many trees in the current view match each use category.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              {useCategoryChartData.map((group) => (
-                <UseCategoryChart
-                  key={group.groupId}
-                  groupLabel={group.groupLabel}
-                  data={group.data}
-                  totalTrees={filteredData?.features.length ?? 0}
-                  totalSpecies={totalUniqueSpecies}
-                  detailedData={useCategoryDetailedData[group.groupId] ?? []}
-                  onPlantIdClick={openPlantById}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold">
-                  Species Distribution in Experimental Plots
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Treemaps showing study attention (left) and tree abundance
-                  (right) by species.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <div>
-                <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                  <h3>Scientific Attention</h3>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        className="inline-flex items-center rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                        aria-label="Scientific Attention chart help"
-                      >
-                        <CircleHelp className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="right"
-                        className="max-w-sm whitespace-normal"
-                      >
-                        <div className="space-y-1.5 text-xs">
-                          <p>
-                            Each rectangle is one species. Larger rectangles
-                            indicate more references for that species.
-                          </p>
-                          <p>
-                            Color intensity reflects scientific attention score
-                            (higher references = darker tone).
-                          </p>
-                          <p>
-                            Species-use context in this section follows the
-                            ethnobotanical curation by AmazonFACE researchers
-                            Beatriz Tristao and Moara Canova.
-                          </p>
-                          <p>
-                            Source data: filtered trees from
-                            `final_AmzFACE_merged_by_coords.with_ids.geojson`
-                            and references from
-                            `species_references_by_species.json`.
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <SpeciesStudyTreeMap
-                  data={speciesStudyWithScores}
-                  maxScore={speciesStudyMaxScore}
-                />
-              </div>
-              <div>
-                <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                  <h3>Tree Abundance</h3>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        className="inline-flex items-center rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                        aria-label="Tree Abundance chart help"
-                      >
-                        <CircleHelp className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="right"
-                        className="max-w-sm whitespace-normal"
-                      >
-                        <div className="space-y-1.5 text-xs">
-                          <p>
-                            Each rectangle is one species. Larger rectangles
-                            indicate more individual trees in the filtered plot.
-                          </p>
-                          <p>
-                            Colors indicate Task 5 use context at species level
-                            and keep visual consistency with other charts.
-                          </p>
-                          <p>
-                            Task 5 species-use information is from AmazonFACE
-                            researchers Beatriz Tristao and Moara Canova.
-                          </p>
-                          <p>
-                            Source data: tree counts from
-                            `final_AmzFACE_merged_by_coords.with_ids.geojson`.
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <SpeciesTreeCountTreeMap
-                  data={speciesStudyWithScores}
-                  maxTreeCount={maxTreeCount}
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-sm font-semibold">
-                    Tree-Level Abundance vs References
-                  </h2>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                        aria-label="Abundance vs References scatter help"
-                      >
-                        <CircleHelp className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="right"
-                        className="max-w-sm whitespace-normal"
-                      >
-                        <div className="space-y-1.5 text-xs">
-                          <p>
-                            Each point is one species. X is number of trees and
-                            Y is number of references for that species.
-                          </p>
-                          <p>
-                            Point color shows Task 5 use category (Food,
-                            Medicinal, Raw Material, or No use).
-                          </p>
-                          <p>
-                            Task 5 species-use categories are based on
-                            ethnobotanical data curated by AmazonFACE
-                            researchers Beatriz Tristao and Moara Canova.
-                          </p>
-                          <p>
-                            Source data: filtered trees from
-                            `final_AmzFACE_merged_by_coords.with_ids.geojson`,
-                            references from
-                            `species_references_by_species.json`, and Task 5 use
-                            from `final_data_species_with_gbif_inaturalist
-                            copy.json`.
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  X-axis is species tree count and Y-axis is species reference
-                  count, with one point per species.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <TreeCountReferenceScatterChart
-                data={treeReferenceScatterData}
-                onPlantIdClick={openPlantById}
-              />
-            </div>
-          </section>
+          <TreeReferenceScatterSection
+            data={treeReferenceScatterData}
+            onPlantIdClick={openPlantById}
+          />
 
           {traitDistributionChartData.length > 0 ? (
             <section className="col-span-full rounded-lg border border-border bg-card/70 p-4 shadow-sm backdrop-blur-xl lg:col-span-2">
