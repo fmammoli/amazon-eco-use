@@ -14,7 +14,7 @@ export function CoelhoEthnobotanicalSection({ rows }: { rows: KeyValueRow[] }) {
   if (rows.length === 0) return null
 
   return (
-    <SectionCard title="Ethnobotanical Uses: Coelho Arboreal Uses">
+    <SectionCard title="Ethnobotanical Uses: Coelho et al. (2021)">
       <KeyValueList rows={rows} />
     </SectionCard>
   )
@@ -40,7 +40,7 @@ export function Task5EthnobotanicalSection({
   if (rows.length === 0 && extraRows.length === 0) return null
 
   return (
-    <SectionCard title="Ethnobotanical Uses: Task 5 Literature">
+    <SectionCard title="Ethnobotanical Uses: Tristao and Canova (2025)">
       <KeyValueList rows={[...rows, ...extraRows]} />
     </SectionCard>
   )

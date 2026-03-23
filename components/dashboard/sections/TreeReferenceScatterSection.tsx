@@ -29,7 +29,7 @@ export const TreeReferenceScatterSection = memo(
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-semibold">
-                Tree-Level Abundance vs References
+                Tree-Level Abundance vs References (Tristão and Canova, 2025)
               </h2>
               <TooltipProvider>
                 <Tooltip>
@@ -49,19 +49,19 @@ export const TreeReferenceScatterSection = memo(
                         number of references for that species.
                       </p>
                       <p>
-                        Point color shows Task 5 use category (Food, Medicinal,
-                        Raw Material, or No use).
+                        Point color shows Tristao and Canova (2025) category
+                        (Food, Medicinal, Raw Material, or No use).
                       </p>
                       <p>
-                        Task 5 species-use categories are based on
-                        ethnobotanical data curated by AmazonFACE researchers
-                        Beatriz Tristao and Moara Canova.
+                        Tristao and Canova (2025) species-use categories are
+                        based on ethnobotanical data curated by AmazonFACE
+                        researchers Beatriz Tristao and Moara Canova.
                       </p>
                       <p>
                         Source data: filtered trees from
                         `final_AmzFACE_merged_by_coords.with_ids.geojson`,
                         references from `species_references_by_species.json`,
-                        and Task 5 use from
+                        and Tristao and Canova (2025) data from
                         `final_data_species_with_gbif_inaturalist copy.json`.
                       </p>
                     </div>

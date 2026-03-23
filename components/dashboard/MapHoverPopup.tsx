@@ -108,7 +108,7 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
           ))}
           <div className="flex justify-between gap-2">
             <span className="text-[11px] font-medium text-muted-foreground">
-              Task 5 Uses
+              Tristao and Canova (2025)
             </span>
             <div className="max-w-44 text-right text-[11px]">
               {task5Uses.length > 1 ? (
@@ -124,7 +124,7 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-[11px] font-medium text-muted-foreground">
-              Coelho Uses
+              Coelho et al. (2021)
             </span>
             <div className="max-w-44 text-right text-[11px]">
               {coelhoUses.length > 1 ? (

@@ -55,6 +55,16 @@ const getPopularNames = (metadata: SpeciesMetadata | undefined) => {
   return Array.from(names)
 }
 
+const formatSelectedEntryLabel = (
+  entry: Pick<SpeciesSearchEntry, "scientificName" | "treeCount">
+) => {
+  const treeLabel = entry.treeCount === 1 ? "tree" : "trees"
+  return `${entry.scientificName} (${entry.treeCount} ${treeLabel})`
+}
+
+const stripSelectedEntryCount = (value: string) =>
+  value.replace(/\s+\(\d+\s+trees?\)$/i, "")
+
 export const PlantSearchSection = memo(function PlantSearchSection({
   data,
   speciesMetadataByName,
@@ -152,7 +162,7 @@ export const PlantSearchSection = memo(function PlantSearchSection({
     )
     if (!entry) return
     lastAppliedSpeciesRef.current = selectedSpecies
-    setQuery(entry.scientificName)
+    setQuery(formatSelectedEntryLabel(entry))
     setSelectedValue(entry.id)
     lastProcessedIdRef.current = entry.id
   }, [selectedSpecies, speciesEntries.length])
@@ -167,7 +177,7 @@ export const PlantSearchSection = memo(function PlantSearchSection({
     lastProcessedIdRef.current = selectedValue
 
     // Update query with selected species name
-    setQuery(entry.scientificName)
+    setQuery(formatSelectedEntryLabel(entry))
 
     // Notify parent components of selection
     if (onSpeciesSelect) {
@@ -188,7 +198,7 @@ export const PlantSearchSection = memo(function PlantSearchSection({
     }
   }
 
-  const normalizedQuery = normalizeSpeciesName(query)
+  const normalizedQuery = normalizeSpeciesName(stripSelectedEntryCount(query))
 
   const matchedEntries = useMemo(() => {
     if (!normalizedQuery) return speciesEntries

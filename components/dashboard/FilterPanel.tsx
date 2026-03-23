@@ -126,11 +126,11 @@ export function FilterPanel({
       },
       {
         accessorKey: "task5_uses",
-        header: "Task 5 Uses",
+        header: "Tristao and Canova (2025)",
       },
       {
         accessorKey: "coelho_uses",
-        header: "Coelho Uses",
+        header: "Coelho et al. (2021)",
       },
       {
         accessorKey: "height",
@@ -316,7 +316,7 @@ export function FilterPanel({
                         <TooltipTrigger
                           type="button"
                           className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                          aria-label="Task 5 uses data source"
+                          aria-label="Tristão and Canova (2025) data source"
                           onClick={(event) => event.preventDefault()}
                         >
                           <CircleHelp className="h-3.5 w-3.5" />
@@ -327,7 +327,7 @@ export function FilterPanel({
                         >
                           <p className="text-xs">
                             These data were collected by researchers Beatriz
-                            Tristao and Moara Canova from the AmazonFACE Task 5
+                            Tristão and Moara Canova from the AmazonFACE Task 5
                             group.
                           </p>
                         </TooltipContent>
@@ -340,7 +340,7 @@ export function FilterPanel({
                         <TooltipTrigger
                           type="button"
                           className="inline-flex items-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                          aria-label="Coelho arboreal uses data source"
+                          aria-label="Coelho et al. (2021) data source"
                           onClick={(event) => event.preventDefault()}
                         >
                           <CircleHelp className="h-3.5 w-3.5" />
