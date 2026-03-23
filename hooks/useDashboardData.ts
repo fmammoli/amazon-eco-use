@@ -1,18 +1,19 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   allFilterIds,
-  filters,
   speciesUseFilterGroups,
 } from "@/components/dashboard/constants"
 import {
-  hasSpeciesUse,
   mergeSpeciesMetadataIntoProps,
   normalizeSpeciesName,
 } from "@/components/dashboard/utils"
-import type { SpeciesMetadata } from "@/components/dashboard/types"
+import { useDashboardGeoData } from "@/hooks/dashboard/useDashboardGeoData"
+import { useDashboardUrlSync } from "./dashboard/useDashboardUrlSync"
+import { useDataCoverage } from "@/hooks/dashboard/useDataCoverage"
+import { useFilteredDashboardData } from "@/hooks/dashboard/useFilteredDashboardData"
 import { useTraitDistributionData } from "@/hooks/dashboard/useTraitDistributionData"
 import { useTraitUseScatterData } from "@/hooks/dashboard/useTraitUseScatterData"
 import { useUseCategoryData } from "@/hooks/dashboard/useUseCategoryData"
@@ -20,10 +21,6 @@ import { useSpeciesStudyScore } from "@/hooks/useSpeciesStudyScore"
 
 export function useDashboardData() {
   const [selectedFilter, setSelectedFilter] = useState("all")
-  const [geojson, setGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-  const [speciesMetadataByName, setSpeciesMetadataByName] = useState<
-    Map<string, SpeciesMetadata>
-  >(new Map())
   const [traitFilters, setTraitFilters] = useState<
     Array<{ id: string; trait: string; range: [number, number] }>
   >([])
@@ -31,176 +28,111 @@ export function useDashboardData() {
     useState<string[]>(allFilterIds)
   const [includeMissing, setIncludeMissing] = useState(true)
   const [showNoUse, setShowNoUse] = useState(true)
+  const [highlightedSpecies, setHighlightedSpecies] = useState<string | null>(
+    null
+  )
+  const [scatterChartState, setScatterChartState] = useState({
+    xTrait: "",
+    yTrait: "",
+    useGroupId: "task5",
+    showNoUsePoints: true,
+    activeCategoryFilter: null as string | null,
+  })
   const [selectedFeature, setSelectedFeature] =
     useState<GeoJSON.Feature | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const activeFilterLabel = useMemo(() => {
-    return (
-      filters.find((filter) => filter.id === selectedFilter)?.label ??
-      "All locations"
-    )
-  }, [selectedFilter])
+  const {
+    geojson,
+    speciesMetadataByName,
+    featuresByPlantId,
+    numericTraits,
+    traitDomains,
+  } = useDashboardGeoData()
 
-  const featuresByPlantId = useMemo(() => {
-    const lookup = new Map<string | number, GeoJSON.Feature>()
+  const selectedPlantId = useMemo(() => {
+    if (!selectedFeature) return null
 
-    geojson?.features.forEach((feature) => {
-      const props = feature.properties as Record<string, unknown> | null
-      const plantId =
-        (props?.["plant_id"] as string | number | undefined) ?? feature.id
-
-      if (plantId != null) {
-        lookup.set(plantId, feature)
-      }
-    })
-
-    return lookup
-  }, [geojson])
-
-  const handleFeatureClick = (feature: GeoJSON.Feature) => {
-    const clickedProps = feature.properties as Record<string, unknown> | null
+    const props = selectedFeature.properties as Record<string, unknown> | null
     const plantId =
-      (clickedProps?.["plant_id"] as string | number | undefined) ?? feature.id
-    const baseFeature =
-      (plantId != null ? featuresByPlantId.get(plantId) : null) ?? feature
-    const baseProps = (baseFeature.properties ?? {}) as Record<string, unknown>
-    const speciesName = baseProps["species_name"] as string | undefined
-    const normalizedSpeciesName = normalizeSpeciesName(speciesName)
-    const speciesMetadata = normalizedSpeciesName
-      ? speciesMetadataByName.get(normalizedSpeciesName)
-      : undefined
+      (props?.["plant_id"] as string | number | undefined) ?? selectedFeature.id
 
-    setSelectedFeature({
-      ...baseFeature,
-      properties: mergeSpeciesMetadataIntoProps(
-        {
-          ...baseProps,
-        },
-        speciesMetadata
-      ),
-    })
+    if (plantId === null || plantId === undefined) return null
 
-    setDrawerOpen(true)
-  }
+    return String(plantId)
+  }, [selectedFeature])
 
-  const openPlantById = (plantId: string | number) => {
-    const directMatch = featuresByPlantId.get(plantId)
-    const normalizedMatch =
-      typeof plantId === "string"
-        ? featuresByPlantId.get(Number(plantId))
-        : featuresByPlantId.get(String(plantId))
+  const handleFeatureClick = useCallback(
+    (feature: GeoJSON.Feature) => {
+      const clickedProps = feature.properties as Record<string, unknown> | null
+      const plantId =
+        (clickedProps?.["plant_id"] as string | number | undefined) ??
+        feature.id
+      const baseFeature =
+        (plantId != null ? featuresByPlantId.get(plantId) : null) ?? feature
+      const baseProps = (baseFeature.properties ?? {}) as Record<
+        string,
+        unknown
+      >
+      const speciesName = baseProps["species_name"] as string | undefined
+      const normalizedSpeciesName = normalizeSpeciesName(speciesName)
+      const speciesMetadata = normalizedSpeciesName
+        ? speciesMetadataByName.get(normalizedSpeciesName)
+        : undefined
 
-    const feature = directMatch ?? normalizedMatch
-    if (!feature) return
-
-    handleFeatureClick(feature)
-  }
-
-  useEffect(() => {
-    let canceled = false
-
-    const load = async () => {
-      try {
-        const geoRes = await fetch(
-          "/data/final_AmzFACE_merged_by_coords.with_ids.geojson"
-        )
-        if (!geoRes.ok) throw new Error("Failed to load geojson")
-        const geoData = (await geoRes.json()) as GeoJSON.FeatureCollection
-
-        const speciesRes = await fetch(
-          "/data/final_data_species_with_gbif_inaturalist copy.json"
-        )
-        if (!speciesRes.ok) throw new Error("Failed to load species metadata")
-        const speciesMetadata = (await speciesRes.json()) as SpeciesMetadata[]
-
-        const speciesMap = new Map<string, SpeciesMetadata>()
-        speciesMetadata.forEach((sp) => {
-          const normalizedName = normalizeSpeciesName(sp?.Species)
-          if (!normalizedName) return
-
-          speciesMap.set(normalizedName, sp)
-        })
-
-        geoData.features.forEach((feature) => {
-          const props = (feature.properties ?? {}) as Record<string, unknown>
-          const plantId = props?.["plant_id"] as string | number | undefined
-
-          if (plantId != null) {
-            feature.id = plantId
-          }
-        })
-
-        if (!canceled) {
-          setSpeciesMetadataByName(speciesMap)
-          setGeojson(geoData)
-        }
-      } catch {
-        // ignore for now
-      }
-    }
-
-    load()
-    return () => {
-      canceled = true
-    }
-  }, [])
-
-  const numericTraits = useMemo(() => {
-    if (!geojson) return [] as string[]
-    const sample = geojson.features[0]?.properties
-    if (!sample) return [] as string[]
-
-    return Object.entries(sample)
-      .filter(([, value]) => typeof value === "number")
-      .map(([key]) => key)
-  }, [geojson])
-
-  const traitDomains = useMemo(() => {
-    if (!geojson) return {} as Record<string, [number, number]>
-
-    const domains: Record<string, [number, number]> = {}
-
-    numericTraits.forEach((trait) => {
-      let min = Number.POSITIVE_INFINITY
-      let max = Number.NEGATIVE_INFINITY
-
-      geojson.features.forEach((feature) => {
-        const value = (feature.properties as Record<string, unknown> | null)?.[
-          trait
-        ]
-        if (typeof value === "number" && Number.isFinite(value)) {
-          min = Math.min(min, value)
-          max = Math.max(max, value)
-        }
+      setSelectedFeature({
+        ...baseFeature,
+        properties: mergeSpeciesMetadataIntoProps(
+          {
+            ...baseProps,
+          },
+          speciesMetadata
+        ),
       })
 
-      if (
-        min !== Number.POSITIVE_INFINITY &&
-        max !== Number.NEGATIVE_INFINITY
-      ) {
-        domains[trait] = [min, max]
-      }
-    })
+      setDrawerOpen(true)
+    },
+    [featuresByPlantId, speciesMetadataByName]
+  )
 
-    return domains
-  }, [geojson, numericTraits])
+  const openPlantById = useCallback(
+    (plantId: string | number) => {
+      const directMatch = featuresByPlantId.get(plantId)
+      const normalizedMatch =
+        typeof plantId === "string"
+          ? featuresByPlantId.get(Number(plantId))
+          : featuresByPlantId.get(String(plantId))
 
-  useEffect(() => {
-    if (numericTraits.length > 0 && traitFilters.length === 0) {
-      const firstTrait = numericTraits[0]
-      const firstDomain = traitDomains[firstTrait]
-      if (firstDomain) {
-        setTraitFilters([
-          {
-            id: `${firstTrait}-${Date.now()}`,
-            trait: firstTrait,
-            range: firstDomain,
-          },
-        ])
-      }
-    }
-  }, [numericTraits, traitDomains, traitFilters.length])
+      const feature = directMatch ?? normalizedMatch
+      if (!feature) return false
+
+      handleFeatureClick(feature)
+      return true
+    },
+    [featuresByPlantId, handleFeatureClick]
+  )
+
+  useDashboardUrlSync({
+    selectedFilter,
+    setSelectedFilter,
+    selectedUseFilters,
+    setSelectedUseFilters,
+    includeMissing,
+    setIncludeMissing,
+    showNoUse,
+    setShowNoUse,
+    highlightedSpecies,
+    setHighlightedSpecies,
+    scatterChartState,
+    setScatterChartState,
+    traitFilters,
+    setTraitFilters,
+    traitDomains,
+    numericTraits,
+    selectedPlantId,
+    drawerOpen,
+    openPlantById,
+  })
 
   const missingValueCounts = useMemo(() => {
     if (!geojson || traitFilters.length === 0)
@@ -231,72 +163,20 @@ export function useDashboardData() {
     return accum
   }, [geojson, traitFilters])
 
-  const filteredData = useMemo(() => {
-    if (!geojson) return null
-
-    const filteredFeatures = geojson.features.flatMap((feature) => {
-      const props = feature.properties as Record<string, unknown> | null
-
-      const speciesName = props
-        ? (props["species_name"] as string | undefined)
-        : undefined
-      const normalizedName = normalizeSpeciesName(speciesName)
-      const metadata = normalizedName
-        ? speciesMetadataByName.get(normalizedName)
-        : undefined
-
-      const hasSelectedUse = selectedUseFilters.some((filterId) =>
-        hasSpeciesUse(metadata, filterId)
-      )
-      const speciesHasAnyUse = allFilterIds.some((id) =>
-        hasSpeciesUse(metadata, id)
-      )
-
-      const passesUseFilter = hasSelectedUse || (showNoUse && !speciesHasAnyUse)
-      if (!passesUseFilter) return []
-
-      if (traitFilters.length > 0) {
-        const passesTraits = traitFilters.every((filter) => {
-          const value = props ? props[filter.trait] : undefined
-
-          if (typeof value !== "number" || !Number.isFinite(value)) {
-            return includeMissing
-          }
-
-          return value >= filter.range[0] && value <= filter.range[1]
-        })
-
-        if (!passesTraits) return []
-      }
-
-      const enrichedFeature: GeoJSON.Feature = {
-        ...feature,
-        properties: {
-          ...mergeSpeciesMetadataIntoProps(
-            {
-              ...(props ?? {}),
-              has_any_use: speciesHasAnyUse ? 1 : 0,
-            },
-            metadata
-          ),
-        },
-      }
-
-      return [enrichedFeature]
-    })
-
-    return {
-      ...geojson,
-      features: filteredFeatures,
-    }
-  }, [
+  const filteredData = useFilteredDashboardData({
     geojson,
     traitFilters,
     includeMissing,
     selectedUseFilters,
     showNoUse,
     speciesMetadataByName,
-  ])
+  })
+
+  const dataCoverage = useDataCoverage({
+    features: filteredData?.features ?? [],
+    traitFilters,
+    numericTraits,
+  })
 
   const { useCategoryDetailedData, useCategoryChartData, totalUniqueSpecies } =
     useUseCategoryData({
@@ -404,7 +284,6 @@ export function useDashboardData() {
   return {
     selectedFilter,
     setSelectedFilter,
-    activeFilterLabel,
     speciesMetadataByName,
     selectedUseFilters,
     toggleSpeciesUseFilter,
@@ -418,6 +297,10 @@ export function useDashboardData() {
     missingValueCounts,
     showNoUse,
     setShowNoUse,
+    highlightedSpecies,
+    setHighlightedSpecies,
+    scatterChartState,
+    setScatterChartState,
     resetFilters,
     filteredData,
     handleFeatureClick,
@@ -436,5 +319,6 @@ export function useDashboardData() {
     speciesStudyWithScores,
     speciesStudyMaxScore,
     getTraitUseScatterData,
+    dataCoverage,
   }
 }

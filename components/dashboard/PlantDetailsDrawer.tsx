@@ -472,7 +472,7 @@ export function PlantDetailsDrawer({
       }}
       direction="right"
     >
-      <DrawerOverlay className="bg-black/20"></DrawerOverlay>
+      <DrawerOverlay className="bg-black/50"></DrawerOverlay>
       <DrawerContent className="flex h-full max-h-screen flex-col overflow-hidden">
         <DrawerHeader className="shrink-0">
           <DrawerTitle>Plant details</DrawerTitle>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   CartesianGrid,
   Legend,
@@ -38,6 +38,14 @@ type UseGroupOption = {
   id: string
   label: string
   categories: string[]
+}
+
+export type TraitUseScatterChartState = {
+  xTrait: string
+  yTrait: string
+  useGroupId: string
+  showNoUsePoints: boolean
+  activeCategoryFilter: string | null
 }
 
 type NumericRange = [number, number]
@@ -83,6 +91,8 @@ const createDomainWithPadding = (values: number[]): NumericRange | null => {
 export function TraitUseScatterChart({
   numericTraits,
   getScatterData,
+  state,
+  onStateChange,
   onPlantIdClick,
 }: {
   numericTraits: string[]
@@ -92,25 +102,31 @@ export function TraitUseScatterChart({
     useGroupId: string
     includeNoUse: boolean
   }) => TraitUseScatterRow[]
+  state: TraitUseScatterChartState
+  onStateChange: (state: TraitUseScatterChartState) => void
   onPlantIdClick?: (plantId: string | number) => void
 }) {
   const useGroupOptions = useMemo(() => buildUseGroupOptions(), [])
 
-  const [xTrait, setXTrait] = useState(numericTraits[0] ?? "")
-  const [yTrait, setYTrait] = useState(
-    numericTraits[1] ?? numericTraits[0] ?? ""
-  )
-  const [selectedUseGroup, setSelectedUseGroup] = useState(
-    useGroupOptions[0]?.id ?? "task5"
-  )
-  const [showNoUsePoints, setShowNoUsePoints] = useState(true)
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState<
-    string | null
-  >(null)
+  const xTrait = state.xTrait
+  const yTrait = state.yTrait
+  const selectedUseGroup = state.useGroupId
+  const showNoUsePoints = state.showNoUsePoints
+  const activeCategoryFilter = state.activeCategoryFilter
   const [modalOpen, setModalOpen] = useState(false)
   const [modalCategory, setModalCategory] = useState<string | null>(null)
   const [xZoomRange, setXZoomRange] = useState<NumericRange | null>(null)
   const [yZoomRange, setYZoomRange] = useState<NumericRange | null>(null)
+
+  const updateState = useCallback(
+    (partial: Partial<TraitUseScatterChartState>) => {
+      onStateChange({
+        ...state,
+        ...partial,
+      })
+    },
+    [onStateChange, state]
+  )
 
   const xTraitLabel = getTraitDisplayLabel(xTrait)
   const yTraitLabel = getTraitDisplayLabel(yTrait)
@@ -118,14 +134,20 @@ export function TraitUseScatterChart({
   useEffect(() => {
     if (numericTraits.length < 2) return
 
-    if (!xTrait || !numericTraits.includes(xTrait)) {
-      setXTrait(numericTraits[0])
-    }
+    const nextXTrait =
+      xTrait && numericTraits.includes(xTrait) ? xTrait : numericTraits[0]
+    const nextYTrait =
+      yTrait && numericTraits.includes(yTrait)
+        ? yTrait
+        : (numericTraits[1] ?? numericTraits[0])
 
-    if (!yTrait || !numericTraits.includes(yTrait)) {
-      setYTrait(numericTraits[1] ?? numericTraits[0])
+    if (nextXTrait !== xTrait || nextYTrait !== yTrait) {
+      updateState({
+        xTrait: nextXTrait,
+        yTrait: nextYTrait,
+      })
     }
-  }, [numericTraits, xTrait, yTrait])
+  }, [numericTraits, updateState, xTrait, yTrait])
 
   const scatterRows = useMemo(() => {
     if (!xTrait || !yTrait || numericTraits.length === 0) return []
@@ -151,6 +173,19 @@ export function TraitUseScatterChart({
         ?.categories ?? []
     )
   }, [selectedUseGroup, useGroupOptions])
+
+  useEffect(() => {
+    if (!activeCategoryFilter) return
+
+    if (!groupCategories.includes(activeCategoryFilter)) {
+      updateState({ activeCategoryFilter: null })
+      return
+    }
+
+    if (!showNoUsePoints && activeCategoryFilter === "No use") {
+      updateState({ activeCategoryFilter: null })
+    }
+  }, [activeCategoryFilter, groupCategories, showNoUsePoints, updateState])
 
   const visibleRows = useMemo(() => {
     if (!activeCategoryFilter) return scatterRows
@@ -256,7 +291,9 @@ export function TraitUseScatterChart({
   }
 
   const handleLegendClick = (category: string) => {
-    setActiveCategoryFilter((prev) => (prev === category ? null : category))
+    updateState({
+      activeCategoryFilter: activeCategoryFilter === category ? null : category,
+    })
   }
 
   const columns: ColumnDef<TraitUseScatterRow>[] = useMemo(
@@ -397,7 +434,7 @@ export function TraitUseScatterChart({
           Trait X
           <select
             value={xTrait}
-            onChange={(event) => setXTrait(event.target.value)}
+            onChange={(event) => updateState({ xTrait: event.target.value })}
             className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
           >
             {numericTraits.map((trait) => (
@@ -412,7 +449,7 @@ export function TraitUseScatterChart({
           Trait Y
           <select
             value={yTrait}
-            onChange={(event) => setYTrait(event.target.value)}
+            onChange={(event) => updateState({ yTrait: event.target.value })}
             className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
           >
             {numericTraits.map((trait) => (
@@ -428,8 +465,10 @@ export function TraitUseScatterChart({
           <select
             value={selectedUseGroup}
             onChange={(event) => {
-              setSelectedUseGroup(event.target.value)
-              setActiveCategoryFilter(null)
+              updateState({
+                useGroupId: event.target.value,
+                activeCategoryFilter: null,
+              })
             }}
             className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
           >
@@ -446,10 +485,13 @@ export function TraitUseScatterChart({
             type="checkbox"
             checked={showNoUsePoints}
             onChange={(event) => {
-              setShowNoUsePoints(event.target.checked)
-              if (!event.target.checked && activeCategoryFilter === "No use") {
-                setActiveCategoryFilter(null)
-              }
+              updateState({
+                showNoUsePoints: event.target.checked,
+                activeCategoryFilter:
+                  !event.target.checked && activeCategoryFilter === "No use"
+                    ? null
+                    : activeCategoryFilter,
+              })
             }}
             className="h-3.5 w-3.5"
           />

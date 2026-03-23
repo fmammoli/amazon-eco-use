@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { type RankAbundanceTreeRow } from "@/components/RankAbundanceChart"
@@ -14,23 +15,56 @@ import {
 import { TraitDistributionChart } from "@/components/dashboard/charts/TraitDistributionChart"
 import { TraitUseScatterChart } from "@/components/dashboard/charts/TraitUseScatterChart"
 import { MapSection } from "@/components/dashboard/sections/MapSection"
-import { PlantSearchSection } from "@/components/dashboard/sections/PlantSearchSection"
+const PlantSearchSection = dynamic(
+  () =>
+    import("@/components/dashboard/sections/PlantSearchSection").then(
+      (mod) => mod.PlantSearchSection
+    ),
+  { ssr: false }
+)
 import { RankAbundanceSection } from "@/components/dashboard/sections/RankAbundanceSection"
 import { SpeciesTreemapSection } from "@/components/dashboard/sections/SpeciesTreemapSection"
 import { TreeReferenceScatterSection } from "@/components/dashboard/sections/TreeReferenceScatterSection"
 import { UsePrevalenceSection } from "@/components/dashboard/sections/UsePrevalenceSection"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { useDashboardData } from "@/hooks/useDashboardData"
 import { computeSpeciesAbundance } from "@/lib/computeSpeciesAbundance"
+
+const WELCOME_DIALOG_SEEN_KEY = "amazonface_dashboard_welcome_seen"
 
 export function Dashboard() {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [highlightedSpecies, setHighlightedSpecies] = useState<string | null>(
-    null
-  )
+  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const hasSeenWelcome =
+      window.localStorage.getItem(WELCOME_DIALOG_SEEN_KEY) === "1"
+
+    if (!hasSeenWelcome) {
+      setWelcomeDialogOpen(true)
+    }
+  }, [])
+
+  const handleWelcomeDialogOpenChange = useCallback((open: boolean) => {
+    setWelcomeDialogOpen(open)
+
+    if (!open && typeof window !== "undefined") {
+      window.localStorage.setItem(WELCOME_DIALOG_SEEN_KEY, "1")
+    }
+  }, [])
 
   const {
-    activeFilterLabel,
     selectedUseFilters,
     toggleSpeciesUseFilter,
     toggleSpeciesUseFilterGroup,
@@ -43,6 +77,10 @@ export function Dashboard() {
     missingValueCounts,
     showNoUse,
     setShowNoUse,
+    highlightedSpecies,
+    setHighlightedSpecies,
+    scatterChartState,
+    setScatterChartState,
     resetFilters,
     filteredData,
     handleFeatureClick,
@@ -61,6 +99,7 @@ export function Dashboard() {
     speciesStudyWithScores,
     speciesStudyMaxScore,
     getTraitUseScatterData,
+    dataCoverage,
     speciesMetadataByName,
   } = useDashboardData()
 
@@ -269,6 +308,66 @@ export function Dashboard() {
 
   return (
     <>
+      <Dialog
+        open={welcomeDialogOpen}
+        onOpenChange={handleWelcomeDialogOpenChange}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base lg:text-lg">
+              Welcome to the AmazonFACE Species Use Dashboard
+            </DialogTitle>
+            <DialogDescription className="text-xs lg:text-sm">
+              This platform supports exploration of species-use patterns within
+              the AmazonFACE experimental rings and how these patterns connect
+              with functional traits and scientific attention.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-xs text-muted-foreground lg:text-sm">
+            <p>
+              This dashboard is derived from data collected by AmazonFACE Task 5
+              researchers Beatriz Tristão and Moara Canova.
+            </p>
+            <div>
+              <p className="font-medium text-foreground">How to use it</p>
+              <ul className="mt-1 list-disc space-y-1 pl-4">
+                <li>
+                  Use the left filters to refine species uses and trait ranges.
+                </li>
+                <li>
+                  Search species by scientific or popular name in the top search
+                  bar.
+                </li>
+                <li>
+                  Hover and click map points to inspect tree-level details and
+                  use data.
+                </li>
+                <li>
+                  Compare treemaps and charts to relate use categories, traits,
+                  and abundance in literature.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2" showCloseButton={false}>
+            <Link
+              href="/about"
+              className="inline-flex h-7 items-center justify-center rounded-md border border-border bg-input/30 px-3 text-xs font-medium text-foreground transition-colors hover:bg-input/50"
+            >
+              About this project
+            </Link>
+            <Button
+              type="button"
+              onClick={() => handleWelcomeDialogOpenChange(false)}
+            >
+              Start exploring
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <PlantDetailsDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
@@ -316,12 +415,12 @@ export function Dashboard() {
           <PlantSearchSection
             data={filteredData}
             speciesMetadataByName={speciesMetadataByName}
+            selectedSpecies={highlightedSpecies}
             onPlantIdClick={openPlantById}
             onSpeciesSelect={setHighlightedSpecies}
           />
 
           <FilterPanel
-            activeFilterLabel={activeFilterLabel}
             speciesUseFilterGroups={speciesUseFilterGroups}
             selectedUseFilters={selectedUseFilters}
             onToggleSpeciesUseFilter={toggleSpeciesUseFilter}
@@ -337,15 +436,16 @@ export function Dashboard() {
             onToggleIncludeMissing={() => setIncludeMissing((prev) => !prev)}
             showNoUse={showNoUse}
             onToggleShowNoUse={() => setShowNoUse((prev) => !prev)}
+            dataCoverage={dataCoverage}
             filteredTreeRows={filteredTreeTableRows}
             onReset={resetFilters}
           />
 
           <MapSection
-            activeFilterLabel={activeFilterLabel}
             data={filteredData}
             onFeatureClick={handleFeatureClick}
             highlightedSpecies={highlightedSpecies}
+            selectedFeature={selectedFeature}
           />
 
           <RankAbundanceSection
@@ -419,6 +519,8 @@ export function Dashboard() {
                 <TraitUseScatterChart
                   numericTraits={numericTraits}
                   getScatterData={getTraitUseScatterData}
+                  state={scatterChartState}
+                  onStateChange={setScatterChartState}
                   onPlantIdClick={openPlantById}
                 />
               </div>
