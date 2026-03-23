@@ -42,6 +42,86 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">How To Use The Dashboard</h2>
+          <p className="text-sm text-muted-foreground">
+            The interface is designed for iterative exploration: start broad,
+            progressively filter, and then inspect species and individual trees
+            in detail.
+          </p>
+
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <div>
+              <p className="font-medium text-foreground">
+                1. Start with filters
+              </p>
+              <p>
+                Use the filter panel to include or exclude use categories and
+                define trait ranges. The map and all charts update together, so
+                each interaction narrows the same underlying dataset.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-medium text-foreground">
+                2. Search species directly
+              </p>
+              <p>
+                The search bar accepts scientific names, genus names, and
+                available popular names. Selecting a species highlights it
+                across charts and map layers and helps focus analysis on one
+                taxon at a time.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-medium text-foreground">
+                3. Read map patterns
+              </p>
+              <p>
+                Hover points for tree-level details. At lower zoom levels,
+                points aggregate by experimental plot; hover aggregated points
+                to compare trees with and without registered use inside each
+                plot.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-medium text-foreground">
+                4. Compare species structure
+              </p>
+              <p>
+                Use the treemaps to compare scientific attention and tree
+                abundance. Hovering links the same species between both
+                treemaps, making it easier to compare ecological prominence and
+                literature coverage.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-medium text-foreground">
+                5. Drill down with charts and tables
+              </p>
+              <p>
+                Click points in scatter and rank-abundance charts to open data
+                tables for the selected species or records. Use table sorting
+                and CSV export for follow-up analysis.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-medium text-foreground">
+                6. Share the exact analytical view
+              </p>
+              <p>
+                Dashboard state is encoded in the URL (filters, selected
+                species, and related view settings). Copy the browser URL to
+                share the same configured view with collaborators.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="space-y-2">
           <h2 className="text-base font-semibold">Data provenance</h2>
           <div className="space-y-2 text-sm text-muted-foreground">

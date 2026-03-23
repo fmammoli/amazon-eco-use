@@ -28,12 +28,6 @@ export const allFilterIds = speciesUseFilterGroups.flatMap((group) =>
   group.filters.map((filter) => filter.id)
 )
 
-export const filters = [
-  { id: "all", label: "All locations" },
-  { id: "recent", label: "Recent" },
-  { id: "top", label: "Top rated" },
-]
-
 export const HISTOGRAM_TRAITS = [
   "SLA",
   "DENS",

@@ -32,6 +32,48 @@ export function MapHoverPopup({ hoverInfo }: { hoverInfo: HoverInfo | null }) {
   const dbh2022 = properties["DBH_2022"] ?? "-"
   const task5Uses = parseUseLabels(properties["task5_use_labels"])
   const coelhoUses = parseUseLabels(properties["coelho_arboreal_use_labels"])
+  const isPlotCluster = Boolean(properties["is_plot_cluster"])
+
+  if (isPlotCluster) {
+    const pointCount = Number(properties["point_count"] ?? 0)
+    const withUseCount = Number(properties["with_use_count"] ?? 0)
+    const noUseCount = Number(properties["no_use_count"] ?? 0)
+
+    return (
+      <Popup
+        longitude={hoverInfo.lngLat[0]}
+        latitude={hoverInfo.lngLat[1]}
+        closeButton={false}
+        closeOnClick={false}
+        anchor="bottom"
+        offset={[0, -10]}
+      >
+        <div className="max-w-xs text-xs">
+          <div className="font-semibold">Aggregated trees</div>
+          <div className="mt-1 space-y-0.5">
+            <div className="flex justify-between gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Total trees
+              </span>
+              <span className="text-right text-[11px]">{pointCount}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Trees with registered use
+              </span>
+              <span className="text-right text-[11px]">{withUseCount}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Trees without use
+              </span>
+              <span className="text-right text-[11px]">{noUseCount}</span>
+            </div>
+          </div>
+        </div>
+      </Popup>
+    )
+  }
 
   const hoverRows = [
     { label: "ID", value: treeId },

@@ -27,6 +27,7 @@ type SpeciesSearchEntry = {
 type PlantSearchSectionProps = {
   data: GeoJSON.FeatureCollection | null
   speciesMetadataByName: Map<string, SpeciesMetadata>
+  selectedSpecies?: string | null
   onPlantIdClick?: (plantId: string | number) => void
   onSpeciesSelect?: (scientificName: string | null) => void
 }
@@ -57,12 +58,14 @@ const getPopularNames = (metadata: SpeciesMetadata | undefined) => {
 export const PlantSearchSection = memo(function PlantSearchSection({
   data,
   speciesMetadataByName,
+  selectedSpecies,
   onPlantIdClick,
   onSpeciesSelect,
 }: PlantSearchSectionProps) {
   const [query, setQuery] = useState("")
   const [selectedValue, setSelectedValue] = useState<string | null>(null)
   const lastProcessedIdRef = useRef<string | null>(null)
+  const lastAppliedSpeciesRef = useRef<string | null | undefined>(undefined)
 
   const speciesEntries = useMemo<SpeciesSearchEntry[]>(() => {
     const features = data?.features ?? []
@@ -129,6 +132,31 @@ export const PlantSearchSection = memo(function PlantSearchSection({
     })
   }, [speciesEntries])
 
+  useEffect(() => {
+    // Reset the applied-species tracker when external selection is cleared so
+    // the same species can be re-applied if it comes back. No setState —
+    // the UI is already cleared via clearSearch() or never had a value.
+    if (!selectedSpecies) {
+      lastAppliedSpeciesRef.current = null
+    }
+  }, [selectedSpecies])
+
+  useEffect(() => {
+    // Populate the combobox from a non-null selectedSpecies (e.g. from URL)
+    // once entries are available. Retries automatically when speciesEntries loads.
+    if (!selectedSpecies || selectedSpecies === lastAppliedSpeciesRef.current)
+      return
+    // Read from the ref so speciesEntries doesn't need to be in deps
+    const entry = [...entriesMapRef.current.values()].find(
+      (e) => e.scientificName === selectedSpecies
+    )
+    if (!entry) return
+    lastAppliedSpeciesRef.current = selectedSpecies
+    setQuery(entry.scientificName)
+    setSelectedValue(entry.id)
+    lastProcessedIdRef.current = entry.id
+  }, [selectedSpecies, speciesEntries.length])
+
   // Handle selection when user picks an entry
   useEffect(() => {
     if (!selectedValue || selectedValue === lastProcessedIdRef.current) return
@@ -163,7 +191,7 @@ export const PlantSearchSection = memo(function PlantSearchSection({
   const normalizedQuery = normalizeSpeciesName(query)
 
   const matchedEntries = useMemo(() => {
-    if (!normalizedQuery) return []
+    if (!normalizedQuery) return speciesEntries
 
     return speciesEntries.filter((entry) => {
       const popularNamesJoined = entry.popularNames.join(" ").toLowerCase()

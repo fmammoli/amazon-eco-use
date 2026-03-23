@@ -37,7 +37,6 @@ type FilteredTreeRow = {
 }
 
 export type FilterPanelProps = {
-  activeFilterLabel: string
   speciesUseFilterGroups: Array<{
     id: string
     label: string
@@ -63,12 +62,17 @@ export type FilterPanelProps = {
   onToggleIncludeMissing: () => void
   showNoUse: boolean
   onToggleShowNoUse: () => void
+  dataCoverage: {
+    totalFilteredTrees: number
+    missingTraitValueTrees: number
+    missingUseMetadataTrees: number
+    traitCoverageLabel: string
+  }
   filteredTreeRows: FilteredTreeRow[]
   onReset: () => void
 }
 
 export function FilterPanel({
-  activeFilterLabel,
   speciesUseFilterGroups,
   selectedUseFilters,
   onToggleSpeciesUseFilter,
@@ -84,6 +88,7 @@ export function FilterPanel({
   onToggleIncludeMissing,
   showNoUse,
   onToggleShowNoUse,
+  dataCoverage,
   filteredTreeRows,
   onReset,
 }: FilterPanelProps) {
@@ -148,6 +153,49 @@ export function FilterPanel({
   )
 
   const filteredCount = filteredTreeRows.length
+  const traitMissingPct =
+    dataCoverage.totalFilteredTrees > 0
+      ? Math.round(
+          (dataCoverage.missingTraitValueTrees /
+            dataCoverage.totalFilteredTrees) *
+            100
+        )
+      : 0
+  const useMissingPct =
+    dataCoverage.totalFilteredTrees > 0
+      ? Math.round(
+          (dataCoverage.missingUseMetadataTrees /
+            dataCoverage.totalFilteredTrees) *
+            100
+        )
+      : 0
+
+  const getGapSeverity = (pct: number) => {
+    if (pct <= 10) {
+      return {
+        label: "Low gap",
+        className:
+          "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+      }
+    }
+
+    if (pct <= 30) {
+      return {
+        label: "Medium gap",
+        className:
+          "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      }
+    }
+
+    return {
+      label: "High gap",
+      className:
+        "border-rose-300/60 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    }
+  }
+
+  const traitGapSeverity = getGapSeverity(traitMissingPct)
+  const useGapSeverity = getGapSeverity(useMissingPct)
 
   return (
     <aside className="rounded-lg border border-border bg-card/80 p-4 shadow-sm backdrop-blur-xl">
@@ -160,9 +208,6 @@ export function FilterPanel({
           >
             Reset filters
           </button>
-          <span className="text-xs text-muted-foreground">
-            {activeFilterLabel}
-          </span>
         </div>
 
         <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
@@ -448,7 +493,91 @@ export function FilterPanel({
           </div>
         </div>
       ) : null}
-
+      <div className="mt-4 rounded-md border border-input bg-background p-3">
+        <p className="text-xs font-medium text-muted-foreground">
+          Data Coverage
+        </p>
+        <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-2">
+            <span>Filtered trees</span>
+            <span className="font-medium text-foreground">
+              {dataCoverage.totalFilteredTrees}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5">
+              Missing trait values ({dataCoverage.traitCoverageLabel})
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    type="button"
+                    className="inline-flex items-center rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                    aria-label="Missing trait values metric definition"
+                    onClick={(event) => event.preventDefault()}
+                  >
+                    <CircleHelp className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    className="max-w-sm whitespace-normal"
+                  >
+                    <p className="text-xs">
+                      Count of filtered trees where one or more checked traits
+                      are missing, null, or non-numeric. Lower is better.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="font-medium text-foreground">
+                {dataCoverage.missingTraitValueTrees} ({traitMissingPct}%)
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${traitGapSeverity.className}`}
+              >
+                {traitGapSeverity.label}
+              </span>
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5">
+              Missing use metadata
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    type="button"
+                    className="inline-flex items-center rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                    aria-label="Missing use metadata metric definition"
+                    onClick={(event) => event.preventDefault()}
+                  >
+                    <CircleHelp className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    className="max-w-sm whitespace-normal"
+                  >
+                    <p className="text-xs">
+                      Count of filtered trees whose species has no populated use
+                      entries in either Task 5 or Coelho metadata fields.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="font-medium text-foreground">
+                {dataCoverage.missingUseMetadataTrees} ({useMissingPct}%)
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${useGapSeverity.className}`}
+              >
+                {useGapSeverity.label}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
       <div className="mt-4 border-t border-border pt-3">
         <Button
           type="button"

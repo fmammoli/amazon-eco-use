@@ -238,13 +238,21 @@ export function RankAbundanceChart({
     [onPlantIdClick]
   )
 
-  const handleChartClick = (state?: {
-    activePayload?: Array<{ payload?: ChartPoint }>
-  }) => {
-    const point = state?.activePayload?.[0]?.payload
-    if (!point?.species) return
+  const handlePointClick = (point: unknown) => {
+    if (!point || typeof point !== "object") return
 
-    setSelectedSpecies(point.species)
+    const directPoint = point as ChartPoint
+    const nestedPoint = (point as { payload?: ChartPoint }).payload
+    const selectedPoint =
+      nestedPoint && typeof nestedPoint.species === "string"
+        ? nestedPoint
+        : typeof directPoint.species === "string"
+          ? directPoint
+          : null
+
+    if (!selectedPoint?.species) return
+
+    setSelectedSpecies(selectedPoint.species)
     setModalOpen(true)
   }
 
@@ -311,10 +319,7 @@ export function RankAbundanceChart({
         config={chartConfig}
         className="h-90 w-full"
       >
-        <ScatterChart
-          margin={{ top: 10, right: 12, bottom: 10, left: 56 }}
-          onClick={handleChartClick}
-        >
+        <ScatterChart margin={{ top: 10, right: 12, bottom: 10, left: 56 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"
@@ -352,6 +357,7 @@ export function RankAbundanceChart({
                   fill={primaryUseColors[use]}
                   fillOpacity={0.85}
                   shape="circle"
+                  onClick={handlePointClick}
                 />
               ) : null,
               multipleRows.length > 0 ? (
@@ -362,6 +368,7 @@ export function RankAbundanceChart({
                   fill={primaryUseColors[use]}
                   fillOpacity={0.85}
                   shape="diamond"
+                  onClick={handlePointClick}
                 />
               ) : null,
             ]
