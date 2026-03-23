@@ -60,12 +60,17 @@ export default function AboutPage() {
             </p>
             <p>
               Additional ethnobotanical data identified here as
-              coelho_arboreal_use is based on the study{" "}
-              <Link href={"https://doi.org/10.1371/journal.pone.0257875"}>
-                Coelho et al. (2021) `&apos;`Eighty-four per cent of all
-                Amazonian arboreal plant individuals are useful to
-                humans`&apos;`
-              </Link>
+              coelho_arboreal_use is based on the study Coelho, S. D., Levis,
+              C., Baccaro, F. B., Figueiredo, F. O. G., Antunes, A. P., ter
+              Steege, H., Pena-Claros, M., Clement, C. R., & Schietti, J.
+              (2021). Eighty-four per cent of all Amazonian arboreal plant
+              individuals are useful to humans. PLOS ONE, 16(10), e0257875.{" "}
+              <Link
+                href="https://doi.org/10.1371/journal.pone.0257875"
+                className="underline underline-offset-2"
+              >
+                https://doi.org/10.1371/journal.pone.0257875
+              </Link>{" "}
               Their dataset is a synthesis from a literature review of 29
               ethnobotanical studies across Amazonia and harmonized at species
               level for trees and palms. The dataset organizes evidence into six

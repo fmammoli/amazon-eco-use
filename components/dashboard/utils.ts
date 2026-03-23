@@ -19,6 +19,14 @@ const isPositiveUseValue = (value: unknown) => {
   return normalized === "1" || normalized === "x" || normalized === "yes"
 }
 
+export const extractPositiveUseLabels = (value: unknown) => {
+  if (!value || typeof value !== "object") return [] as string[]
+
+  return Object.entries(value as Record<string, unknown>)
+    .filter(([, useValue]) => isPositiveUseValue(useValue))
+    .map(([label]) => label)
+}
+
 export const hasSpeciesUse = (
   metadata: SpeciesMetadata | undefined,
   filterId: string
@@ -102,8 +110,15 @@ export const mergeSpeciesMetadataIntoProps = (
 ) => {
   if (!metadata) return props
 
+  const task5UseLabels = extractPositiveUseLabels(metadata.task5_use ?? null)
+  const coelhoUseLabels = extractPositiveUseLabels(
+    metadata.coelho_arboreal_uses ?? null
+  )
+
   props["task5_use"] = metadata.task5_use ?? null
   props["coelho_arboreal_uses"] = metadata.coelho_arboreal_uses ?? null
+  props["task5_use_labels"] = task5UseLabels.join("||")
+  props["coelho_arboreal_use_labels"] = coelhoUseLabels.join("||")
 
   if (metadata.coelho_arboreal_uses) {
     const uses = metadata.coelho_arboreal_uses

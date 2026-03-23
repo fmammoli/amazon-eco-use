@@ -9,6 +9,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  DrawerOverlay,
 } from "@/components/ui/drawer"
 import {
   CoelhoEthnobotanicalSection,
@@ -23,6 +24,7 @@ import {
   type KeyValueRow,
 } from "@/components/dashboard/plant-details-drawer/KeyValueList"
 import { SectionCard } from "@/components/dashboard/plant-details-drawer/SectionCard"
+import { getTraitDisplayLabel } from "@/components/dashboard/constants"
 import { normalizeSpeciesName } from "@/components/dashboard/utils"
 
 const coelhoUseFields = [
@@ -315,28 +317,52 @@ export function PlantDetailsDrawer({
 
   const functionalTraitRows: KeyValueRow[] = [
     functionalTraits?.CONT != null
-      ? { label: "CONT", value: functionalTraits.CONT.toFixed(2) }
+      ? {
+          label: getTraitDisplayLabel("CONT"),
+          value: functionalTraits.CONT.toFixed(2),
+        }
       : null,
     functionalTraits?.DENS != null
-      ? { label: "DENS", value: functionalTraits.DENS.toFixed(4) }
+      ? {
+          label: getTraitDisplayLabel("DENS"),
+          value: functionalTraits.DENS.toFixed(4),
+        }
       : null,
     functionalTraits?.ESP != null
-      ? { label: "ESP", value: functionalTraits.ESP.toFixed(3) }
+      ? {
+          label: getTraitDisplayLabel("ESP"),
+          value: functionalTraits.ESP.toFixed(3),
+        }
       : null,
     functionalTraits?.GUARD != null
-      ? { label: "GUARD", value: functionalTraits.GUARD.toFixed(2) }
+      ? {
+          label: getTraitDisplayLabel("GUARD"),
+          value: functionalTraits.GUARD.toFixed(2),
+        }
       : null,
     functionalTraits?.VEIND != null
-      ? { label: "VEIND", value: functionalTraits.VEIND.toFixed(2) }
+      ? {
+          label: getTraitDisplayLabel("VEIND"),
+          value: functionalTraits.VEIND.toFixed(2),
+        }
       : null,
     functionalTraits?.SLA != null
-      ? { label: "SLA", value: functionalTraits.SLA.toFixed(2) }
+      ? {
+          label: getTraitDisplayLabel("SLA"),
+          value: functionalTraits.SLA.toFixed(2),
+        }
       : null,
     functionalTraits?.SPAD != null
-      ? { label: "SPAD", value: functionalTraits.SPAD.toFixed(1) }
+      ? {
+          label: getTraitDisplayLabel("SPAD"),
+          value: functionalTraits.SPAD.toFixed(1),
+        }
       : null,
     functionalTraits?.SOIL_RESP != null
-      ? { label: "Soil Resp", value: functionalTraits.SOIL_RESP }
+      ? {
+          label: getTraitDisplayLabel("SOIL_RESP"),
+          value: functionalTraits.SOIL_RESP,
+        }
       : null,
   ].filter(notNull)
 
@@ -446,6 +472,7 @@ export function PlantDetailsDrawer({
       }}
       direction="right"
     >
+      <DrawerOverlay className="bg-black/20"></DrawerOverlay>
       <DrawerContent className="flex h-full max-h-screen flex-col overflow-hidden">
         <DrawerHeader className="shrink-0">
           <DrawerTitle>Plant details</DrawerTitle>
