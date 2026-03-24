@@ -117,7 +117,6 @@ export function Dashboard() {
     speciesStudyWithScores,
     speciesStudyMaxScore,
     getTraitUseScatterData,
-    dataCoverage,
     speciesMetadataByName,
     mapFilterStats,
   } = useDashboardData()
@@ -554,7 +553,6 @@ export function Dashboard() {
             onToggleIncludeMissing={() => setIncludeMissing((prev) => !prev)}
             showNoUse={showNoUse}
             onToggleShowNoUse={() => setShowNoUse((prev) => !prev)}
-            dataCoverage={dataCoverage}
             filteredSpeciesCount={mapFilterStats.selected.species.total}
             filteredTreeRows={filteredTreeTableRows}
             onReset={resetFilters}
