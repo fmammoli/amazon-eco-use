@@ -47,11 +47,18 @@ export function MapView({
   onFeatureClick,
   highlightedSpecies,
   selectedFeature,
+  centerOnCoordinates,
+  onClearCenteredHighlight,
 }: {
   data: GeoJSON.FeatureCollection | null
   onFeatureClick?: (feature: GeoJSON.Feature) => void
   highlightedSpecies?: string | null
   selectedFeature?: GeoJSON.Feature | null
+  centerOnCoordinates?: {
+    coords: [number, number]
+    plantId?: string | number
+  } | null
+  onClearCenteredHighlight?: () => void
 }) {
   const mapRef = useRef<MapRef | null>(null)
   const plotsData = usePlotsData()
@@ -147,6 +154,23 @@ export function MapView({
     })
   }, [selectedFeature, highlightedSpecies])
 
+  useEffect(() => {
+    if (!centerOnCoordinates) return
+
+    const map = mapRef.current?.getMap()
+    if (!map) return
+
+    const [lng, lat] = centerOnCoordinates.coords
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return
+
+    map.flyTo({
+      center: [lng, lat],
+      zoom: Math.max(map.getZoom(), 19),
+      duration: 500,
+      essential: true,
+    })
+  }, [centerOnCoordinates])
+
   const resetView = useCallback(() => {
     const map = mapRef.current?.getMap()
     map?.flyTo({
@@ -191,6 +215,14 @@ export function MapView({
         const plantId =
           (props?.["plant_id"] as string | number | undefined) ?? feature.id
 
+        if (
+          centerOnCoordinates?.plantId != null &&
+          plantId != null &&
+          plantId !== centerOnCoordinates.plantId
+        ) {
+          onClearCenteredHighlight?.()
+        }
+
         if (plantId != null) {
           setHoveredPlantId(plantId)
           setMapCursor("pointer")
@@ -210,7 +242,13 @@ export function MapView({
       setMapCursor("")
       clearHover()
     },
-    [clearHover, setHover, setMapCursor]
+    [
+      centerOnCoordinates,
+      clearHover,
+      onClearCenteredHighlight,
+      setHover,
+      setMapCursor,
+    ]
   )
 
   const onMouseLeave = useCallback(() => {
@@ -263,6 +301,17 @@ export function MapView({
     [onFeatureClick]
   )
 
+  const selectedPlantId = useMemo<string | number | null>(() => {
+    if (centerOnCoordinates?.plantId != null) return centerOnCoordinates.plantId
+
+    const props = selectedFeature?.properties as Record<string, unknown> | null
+    const plantId =
+      (props?.["plant_id"] as string | number | undefined) ??
+      (selectedFeature?.id as string | number | undefined)
+
+    return plantId ?? null
+  }, [centerOnCoordinates?.plantId, selectedFeature])
+
   const hoveredWithUseFilter = useMemo(
     () =>
       hoveredPlantId != null ? buildHoveredWithUseFilter(hoveredPlantId) : null,
@@ -273,6 +322,20 @@ export function MapView({
     () =>
       hoveredPlantId != null ? buildHoveredNoUseFilter(hoveredPlantId) : null,
     [hoveredPlantId]
+  )
+
+  const selectedWithUseFilter = useMemo(
+    () =>
+      selectedPlantId != null
+        ? buildHoveredWithUseFilter(selectedPlantId)
+        : null,
+    [selectedPlantId]
+  )
+
+  const selectedNoUseFilter = useMemo(
+    () =>
+      selectedPlantId != null ? buildHoveredNoUseFilter(selectedPlantId) : null,
+    [selectedPlantId]
   )
 
   const highlightedWithUseFilter = useMemo(
@@ -339,8 +402,34 @@ export function MapView({
     [highlightedNoUseFilter]
   )
 
+  const selectedWithUseOverlay = useMemo<LayerSpecification | null>(
+    () =>
+      selectedWithUseFilter
+        ? {
+            ...hoverWithUseLayer,
+            id: "plants-selected-with-use",
+            filter: selectedWithUseFilter,
+            minzoom: PLOT_CLUSTER_VISIBLE_MAX_ZOOM,
+          }
+        : null,
+    [selectedWithUseFilter]
+  )
+
+  const selectedNoUseOverlay = useMemo<LayerSpecification | null>(
+    () =>
+      selectedNoUseFilter
+        ? {
+            ...hoverNoUseLayer,
+            id: "plants-selected-no-use",
+            filter: selectedNoUseFilter,
+            minzoom: PLOT_CLUSTER_VISIBLE_MAX_ZOOM,
+          }
+        : null,
+    [selectedNoUseFilter]
+  )
+
   return (
-    <div className="relative mt-4 h-[90%] w-full rounded-md border border-border bg-muted">
+    <div className="relative h-[95svh] w-full rounded-md border border-border bg-muted">
       <Map
         ref={mapRef}
         reuseMaps
@@ -370,6 +459,10 @@ export function MapView({
             <Layer {...plantsWithUseLayer} />
             <Layer {...plantsNoUseLayer} />
             <Layer {...treeIdLabelLayer} />
+            {selectedWithUseOverlay ? (
+              <Layer {...selectedWithUseOverlay} />
+            ) : null}
+            {selectedNoUseOverlay ? <Layer {...selectedNoUseOverlay} /> : null}
             {hoveredWithUseOverlay ? (
               <Layer {...hoveredWithUseOverlay} />
             ) : null}

@@ -6,6 +6,7 @@ import {
   TreeCountReferenceScatterChart,
   type TreeReferencePoint,
 } from "@/components/dashboard/charts/TreeCountReferenceScatterChart"
+import { type RankAbundanceTreeRow } from "@/components/RankAbundanceChart"
 import {
   Tooltip,
   TooltipContent,
@@ -15,12 +16,14 @@ import {
 
 type TreeReferenceScatterSectionProps = {
   data: TreeReferencePoint[]
+  treeRows: RankAbundanceTreeRow[]
   onPlantIdClick?: (plantId: string | number) => void
 }
 
 export const TreeReferenceScatterSection = memo(
   function TreeReferenceScatterSection({
     data,
+    treeRows,
     onPlantIdClick,
   }: TreeReferenceScatterSectionProps) {
     return (
@@ -79,6 +82,7 @@ export const TreeReferenceScatterSection = memo(
         <div className="mt-4">
           <TreeCountReferenceScatterChart
             data={data}
+            treeRows={treeRows}
             onPlantIdClick={onPlantIdClick}
           />
         </div>

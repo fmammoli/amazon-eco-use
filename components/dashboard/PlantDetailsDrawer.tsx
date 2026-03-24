@@ -96,11 +96,16 @@ export function PlantDetailsDrawer({
   onOpenChange,
   selectedFeature,
   onSelectFeature,
+  onCenterOnCoordinates,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   selectedFeature: GeoJSON.Feature | null
   onSelectFeature: (feature: GeoJSON.Feature | null) => void
+  onCenterOnCoordinates?: (config: {
+    coords: [number, number]
+    plantId?: string | number
+  }) => void
 }) {
   const selectedFeatureProps = (selectedFeature?.properties ??
     null) as UnknownRecord | null
@@ -485,13 +490,38 @@ export function PlantDetailsDrawer({
           {selectedFeatureProps ? (
             <div className="space-y-3">
               <SectionCard title="Geometry">
-                <p className="text-xs text-muted-foreground select-text">
-                  {selectedFeature?.geometry?.type}
-                  {selectedFeature?.geometry?.type === "Point" &&
-                  Array.isArray(selectedFeature.geometry?.coordinates)
-                    ? ` — [${selectedFeature.geometry?.coordinates?.join(", ")}]`
-                    : null}
-                </p>
+                <button
+                  onClick={() => {
+                    if (
+                      selectedFeature?.geometry?.type === "Point" &&
+                      Array.isArray(selectedFeature.geometry?.coordinates) &&
+                      selectedFeature.geometry.coordinates.length === 2
+                    ) {
+                      const [lng, lat] = selectedFeature.geometry
+                        .coordinates as [number, number]
+                      if (Number.isFinite(lng) && Number.isFinite(lat)) {
+                        const plantId = selectedFeatureProps["plant_id"] as
+                          | string
+                          | number
+                          | undefined
+                        onCenterOnCoordinates?.({
+                          coords: [lng, lat],
+                          plantId,
+                        })
+                      }
+                    }
+                  }}
+                  className="w-full cursor-pointer text-left transition-colors hover:text-primary"
+                  type="button"
+                >
+                  <p className="text-xs text-muted-foreground hover:text-primary/80">
+                    {selectedFeature?.geometry?.type}
+                    {selectedFeature?.geometry?.type === "Point" &&
+                    Array.isArray(selectedFeature.geometry?.coordinates)
+                      ? ` — [${selectedFeature.geometry?.coordinates?.join(", ")}]`
+                      : null}
+                  </p>
+                </button>
               </SectionCard>
 
               {speciesRows.length > 0 ? (

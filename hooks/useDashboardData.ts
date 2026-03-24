@@ -7,6 +7,7 @@ import {
   speciesUseFilterGroups,
 } from "@/components/dashboard/constants"
 import {
+  hasSpeciesUse,
   mergeSpeciesMetadataIntoProps,
   normalizeSpeciesName,
 } from "@/components/dashboard/utils"
@@ -201,6 +202,72 @@ export function useDashboardData() {
     maxScore: speciesStudyMaxScore,
   } = useSpeciesStudyScore(filteredData?.features ?? null)
 
+  const mapFilterStats = useMemo(() => {
+    const totalFeatures = geojson?.features ?? []
+    const selectedFeatures = filteredData?.features ?? []
+
+    const getSpeciesName = (feature: GeoJSON.Feature) => {
+      const props = feature.properties as Record<string, unknown> | null
+      const speciesName =
+        (props?.["species_name"] as string | undefined) ??
+        (props?.["Species"] as string | undefined)
+
+      return normalizeSpeciesName(speciesName)
+    }
+
+    const getHasUse = (feature: GeoJSON.Feature) => {
+      const normalizedSpeciesName = getSpeciesName(feature)
+      if (!normalizedSpeciesName) return false
+
+      const metadata = speciesMetadataByName.get(normalizedSpeciesName)
+      return allFilterIds.some((filterId) => hasSpeciesUse(metadata, filterId))
+    }
+
+    const summarize = (features: GeoJSON.Feature[]) => {
+      let treesWithUse = 0
+      let treesWithoutUse = 0
+      const speciesUseByName = new Map<string, boolean>()
+
+      features.forEach((feature) => {
+        const hasUse = getHasUse(feature)
+        if (hasUse) {
+          treesWithUse += 1
+        } else {
+          treesWithoutUse += 1
+        }
+
+        const speciesName = getSpeciesName(feature)
+        if (!speciesName) return
+
+        const existing = speciesUseByName.get(speciesName) ?? false
+        speciesUseByName.set(speciesName, existing || hasUse)
+      })
+
+      const speciesWithUse = Array.from(speciesUseByName.values()).filter(
+        Boolean
+      ).length
+      const totalSpecies = speciesUseByName.size
+
+      return {
+        trees: {
+          total: features.length,
+          withUse: treesWithUse,
+          withoutUse: treesWithoutUse,
+        },
+        species: {
+          total: totalSpecies,
+          withUse: speciesWithUse,
+          withoutUse: totalSpecies - speciesWithUse,
+        },
+      }
+    }
+
+    return {
+      dataset: summarize(totalFeatures),
+      selected: summarize(selectedFeatures),
+    }
+  }, [filteredData?.features, geojson?.features, speciesMetadataByName])
+
   const toggleSpeciesUseFilter = (filterId: string) => {
     setSelectedUseFilters((prev) =>
       prev.includes(filterId)
@@ -320,5 +387,6 @@ export function useDashboardData() {
     speciesStudyMaxScore,
     getTraitUseScatterData,
     dataCoverage,
+    mapFilterStats,
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
+import { type ColumnDef } from "@tanstack/react-table"
 import {
   CartesianGrid,
   Legend,
@@ -15,6 +16,9 @@ import {
   getUseCategoryColor,
   speciesUseFilterGroups,
 } from "@/components/dashboard/constants"
+import { DataTableModal } from "@/components/dashboard/charts/DataTableModal"
+import { normalizeSpeciesName } from "@/components/dashboard/utils"
+import type { RankAbundanceTreeRow } from "@/components/RankAbundanceChart"
 
 const chartConfig = {
   points: { label: "Species" },
@@ -32,6 +36,7 @@ export type TreeReferencePoint = {
 
 type TreeCountReferenceScatterChartProps = {
   data: TreeReferencePoint[]
+  treeRows: RankAbundanceTreeRow[]
   onPlantIdClick?: (plantId: string | number) => void
 }
 
@@ -64,8 +69,95 @@ function CustomTooltip({
 
 export function TreeCountReferenceScatterChart({
   data,
+  treeRows,
   onPlantIdClick,
 }: TreeCountReferenceScatterChartProps) {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null)
+
+  const treeRowsBySpecies = useMemo(() => {
+    const grouped = new Map<string, RankAbundanceTreeRow[]>()
+
+    treeRows.forEach((row) => {
+      const key = normalizeSpeciesName(row.species_name)
+      if (!key) return
+
+      const rows = grouped.get(key) ?? []
+      rows.push(row)
+      grouped.set(key, rows)
+    })
+
+    return grouped
+  }, [treeRows])
+
+  const modalRows = useMemo(() => {
+    if (!selectedSpecies) return []
+    return treeRowsBySpecies.get(normalizeSpeciesName(selectedSpecies)) ?? []
+  }, [selectedSpecies, treeRowsBySpecies])
+
+  const modalTitle = selectedSpecies
+    ? `Trees of ${selectedSpecies}`
+    : "Species trees"
+
+  const modalDescription = selectedSpecies
+    ? `${modalRows.length} tree${modalRows.length === 1 ? "" : "s"} in current filtered view`
+    : "Click a species point to inspect individual trees"
+
+  const columns: ColumnDef<RankAbundanceTreeRow>[] = useMemo(
+    () => [
+      {
+        accessorKey: "plant_id",
+        header: "Plant ID",
+        cell: (info) => {
+          const plantId = info.getValue() as string | number
+
+          if (!onPlantIdClick) {
+            return String(plantId)
+          }
+
+          return (
+            <button
+              type="button"
+              onClick={() => onPlantIdClick(plantId)}
+              className="cursor-pointer text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              {String(plantId)}
+            </button>
+          )
+        },
+      },
+      {
+        accessorKey: "species_name",
+        header: "Species",
+      },
+      {
+        accessorKey: "family",
+        header: "Family",
+      },
+      {
+        accessorKey: "height",
+        header: "Height",
+        cell: (info) => {
+          const value = info.getValue() as number | null
+          return typeof value === "number" && Number.isFinite(value)
+            ? value.toFixed(2)
+            : "-"
+        },
+      },
+      {
+        accessorKey: "dbh_2022",
+        header: "DBH 2022",
+        cell: (info) => {
+          const value = info.getValue() as number | null
+          return typeof value === "number" && Number.isFinite(value)
+            ? value.toFixed(2)
+            : "-"
+        },
+      },
+    ],
+    [onPlantIdClick]
+  )
+
   const task5Categories = useMemo(() => {
     const labels =
       speciesUseFilterGroups
@@ -106,6 +198,18 @@ export function TreeCountReferenceScatterChart({
       <div className="text-[11px] text-muted-foreground">
         {chartData.length} points (one point per species)
       </div>
+      <div className="text-[11px] text-muted-foreground">
+        Click a point to open the list of individual trees for that species.
+      </div>
+      <DataTableModal
+        title={modalTitle}
+        description={modalDescription}
+        data={modalRows}
+        columns={columns}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        showTrigger={false}
+      />
       <ChartContainer
         id="tree-count-reference-scatter"
         config={chartConfig}
@@ -117,6 +221,12 @@ export function TreeCountReferenceScatterChart({
             type="number"
             dataKey="x"
             name="Tree count"
+            label={{
+              value: "Tree count",
+              position: "insideBottom",
+              offset: -4,
+              fontSize: 11,
+            }}
             domain={[0, maxX + 1]}
             tick={{ fontSize: 10 }}
             tickLine={false}
@@ -127,6 +237,12 @@ export function TreeCountReferenceScatterChart({
             type="number"
             dataKey="y"
             name="References"
+            label={{
+              value: "Reference count",
+              angle: -90,
+              position: "insideLeft",
+              fontSize: 11,
+            }}
             domain={[0, maxY + 1]}
             tick={{ fontSize: 10 }}
             tickLine={false}
@@ -178,15 +294,16 @@ export function TreeCountReferenceScatterChart({
                 data={points}
                 fill={getUseCategoryColor(category, task5Categories)}
                 fillOpacity={0.55}
-                cursor={onPlantIdClick ? "pointer" : undefined}
+                cursor="pointer"
                 onClick={(pointData) => {
                   const point = (
                     pointData as { payload?: TreeReferencePoint } | undefined
                   )?.payload
 
-                  if (!point || point.treeId == null) return
+                  if (!point || !point.species) return
 
-                  onPlantIdClick?.(point.treeId)
+                  setSelectedSpecies(point.species)
+                  setModalOpen(true)
                 }}
               />
             )

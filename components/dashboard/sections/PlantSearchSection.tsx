@@ -220,10 +220,10 @@ export const PlantSearchSection = memo(function PlantSearchSection({
   return (
     <section className="col-span-full lg:col-span-2">
       <Card className="border border-border bg-card/70 shadow-sm backdrop-blur-xl">
-        <CardContent className="pt-1">
-          <div className="mb-3 space-y-1">
-            <p className="text-sm font-semibold">Plant Search</p>
-            <p className="text-xs text-muted-foreground">
+        <CardContent className="">
+          <div className="flex w-full items-baseline gap-4 space-y-1">
+            <p className="text-sm font-semibold">Search</p>
+            <p className="text-xs text-muted-foreground italic">
               Search by genus, scientific species name, or popular name.
             </p>
           </div>

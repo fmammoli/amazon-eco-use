@@ -124,9 +124,22 @@ export function RankAbundanceChart({
   const [useSource, setUseSource] = useState<"task5" | "coelho">("task5")
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null)
+  const [hiddenUses, setHiddenUses] = useState<Set<string>>(new Set())
 
   const data = useSource === "task5" ? task5Data : coelhoData
   const activeLegendOrder = primaryUseOrderBySource[useSource]
+
+  const toggleUseLegend = (use: string) => {
+    setHiddenUses((prev) => {
+      const next = new Set(prev)
+      if (next.has(use)) {
+        next.delete(use)
+      } else {
+        next.add(use)
+      }
+      return next
+    })
+  }
 
   const chartData = useMemo<ChartPoint[]>(
     () =>
@@ -269,9 +282,9 @@ export function RankAbundanceChart({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="text-[11px] text-muted-foreground">
-          Use dataset for color/shape encoding:
+          Select dataset for color and shape encoding:
         </div>
         <div className="inline-flex items-center rounded-md border border-border bg-background/70 p-0.5">
           <button
@@ -319,12 +332,18 @@ export function RankAbundanceChart({
         config={chartConfig}
         className="h-90 w-full"
       >
-        <ScatterChart margin={{ top: 10, right: 12, bottom: 10, left: 56 }}>
+        <ScatterChart margin={{ top: 10, right: 12, bottom: 10, left: 4 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"
             dataKey="x"
             name="Species rank"
+            label={{
+              value: "Species rank",
+              position: "insideBottom",
+              offset: -4,
+              fontSize: 11,
+            }}
             domain={[1, maxRank]}
             tick={{ fontSize: 10 }}
             tickLine={false}
@@ -335,6 +354,12 @@ export function RankAbundanceChart({
             type="number"
             dataKey="y"
             name="Abundance"
+            label={{
+              value: "Tree abundance",
+              angle: -90,
+              position: "insideLeft",
+              fontSize: 11,
+            }}
             domain={[0, maxAbundance + 1]}
             tick={{ fontSize: 10 }}
             tickLine={false}
@@ -347,9 +372,10 @@ export function RankAbundanceChart({
           {primaryUseOrder.flatMap((use) => {
             const singleRows = groupedSeries.get(`${use}__single`) ?? []
             const multipleRows = groupedSeries.get(`${use}__multiple`) ?? []
+            const isHidden = hiddenUses.has(use)
 
             return [
-              singleRows.length > 0 ? (
+              singleRows.length > 0 && !isHidden ? (
                 <Scatter
                   key={`${use}-single`}
                   data={singleRows}
@@ -360,7 +386,7 @@ export function RankAbundanceChart({
                   onClick={handlePointClick}
                 />
               ) : null,
-              multipleRows.length > 0 ? (
+              multipleRows.length > 0 && !isHidden ? (
                 <Scatter
                   key={`${use}-multiple`}
                   data={multipleRows}
@@ -380,15 +406,28 @@ export function RankAbundanceChart({
         <span className="font-semibold text-foreground">
           Colors (primary use):
         </span>
-        {activeLegendOrder.map((use) => (
-          <span key={use} className="inline-flex items-center gap-1.5">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ background: primaryUseColors[use] }}
-            />
-            {use}
-          </span>
-        ))}
+        {activeLegendOrder.map((use) => {
+          const isHidden = hiddenUses.has(use)
+          return (
+            <button
+              key={use}
+              type="button"
+              onClick={() => toggleUseLegend(use)}
+              className={`inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 transition-all ${
+                isHidden
+                  ? "opacity-40 hover:opacity-60"
+                  : "hover:bg-accent hover:opacity-80"
+              }`}
+              title={isHidden ? `Click to show ${use}` : `Click to hide ${use}`}
+            >
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ background: primaryUseColors[use] }}
+              />
+              <span className={isHidden ? "line-through" : ""}>{use}</span>
+            </button>
+          )
+        })}
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">

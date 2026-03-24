@@ -619,7 +619,7 @@ export function TraitUseScatterChart({
                         type="button"
                         onClick={() => handleLegendClick(category)}
                         onDoubleClick={() => openCategoryRows(category)}
-                        className="inline-flex items-center gap-1.5"
+                        className="inline-flex cursor-pointer items-center gap-1.5"
                         style={{
                           opacity: activeCategoryFilter && !isActive ? 0.35 : 1,
                         }}
