@@ -332,7 +332,7 @@ export function RankAbundanceChart({
         config={chartConfig}
         className="h-90 w-full"
       >
-        <ScatterChart margin={{ top: 10, right: 12, bottom: 10, left: 4 }}>
+        <ScatterChart margin={{ top: 10, right: 12, bottom: 10, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"

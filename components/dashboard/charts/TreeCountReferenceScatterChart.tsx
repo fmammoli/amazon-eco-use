@@ -215,7 +215,7 @@ export function TreeCountReferenceScatterChart({
         config={chartConfig}
         className="h-105 w-full"
       >
-        <ScatterChart margin={{ top: 10, right: 8, bottom: 10, left: 64 }}>
+        <ScatterChart margin={{ top: 10, right: 8, bottom: 10, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"
