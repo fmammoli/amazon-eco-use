@@ -1,8 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useMemo } from "react"
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts"
-import { ClipboardCheck, ClipboardCopy } from "lucide-react"
 
 export interface TreeMapDataPoint {
   name: string
@@ -23,6 +22,7 @@ interface SpeciesStudyTreeMapProps {
   maxScore: number
   hoveredSpecies?: string | null
   onHoverSpecies?: (species: string | null) => void
+  onCellClick?: (species: string | null) => void
 }
 
 function normalizeSpecies(value: string | null | undefined): string {
@@ -40,15 +40,6 @@ function getColorByScore(score: number, maxScore: number): string {
   return "#7fc9a0" // light green, still readable
 }
 
-function copySpeciesNameToClipboard(speciesName: string) {
-  if (typeof window === "undefined" || !window.isSecureContext) return
-  if (!navigator?.clipboard?.writeText) return
-
-  void navigator.clipboard.writeText(speciesName).catch(() => {
-    // Intentionally ignore clipboard permission/runtime errors.
-  })
-}
-
 interface CustomTreeMapContentProps {
   x?: number
   y?: number
@@ -61,7 +52,7 @@ interface CustomTreeMapContentProps {
   treeCount?: number
   hoveredSpecies?: string | null
   onHoverSpecies?: (species: string | null) => void
-  onCellCopy?: (species: string | null) => void
+  onCellClick?: (species: string | null) => void
 }
 
 const CustomTreeMapContent = ({
@@ -74,7 +65,7 @@ const CustomTreeMapContent = ({
   payload,
   hoveredSpecies,
   onHoverSpecies,
-  onCellCopy,
+  onCellClick,
 }: CustomTreeMapContentProps) => {
   const rawName =
     typeof name === "string"
@@ -119,7 +110,7 @@ const CustomTreeMapContent = ({
         onHoverSpecies?.(hoverTargetSpecies)
       }}
       onClickCapture={() => {
-        onCellCopy?.(hoverTargetSpecies)
+        onCellClick?.(hoverTargetSpecies)
       }}
       className="cursor-pointer"
     >
@@ -233,14 +224,9 @@ interface CustomTooltipProps {
   payload?: Array<{
     payload?: Partial<TreeMapDataPoint>
   }>
-  copiedSpecies?: string | null
 }
 
-const CustomTooltip = ({
-  active,
-  payload,
-  copiedSpecies,
-}: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload[0]) {
     const data = payload[0].payload ?? {}
     const speciesName =
@@ -251,8 +237,6 @@ const CustomTooltip = ({
     const referenceCount =
       typeof data.referenceCount === "number" ? data.referenceCount : 0
     const treeCount = typeof data.treeCount === "number" ? data.treeCount : 0
-    const showCopied = speciesName === copiedSpecies
-
     return (
       <div className="rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">
         <p className="mb-1 text-sm font-semibold">{speciesName}</p>
@@ -266,15 +250,7 @@ const CustomTooltip = ({
           <strong>Trees in Plot:</strong> {treeCount}
         </p>
         <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-          {showCopied ? (
-            <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600" />
-          ) : (
-            <ClipboardCopy className="h-3.5 w-3.5" />
-          )}
-          <span>
-            Click this cell to copy the species name, then paste it in the
-            search bar.
-          </span>
+          <span>Click this cell to view the matching trees.</span>
         </div>
       </div>
     )
@@ -288,36 +264,8 @@ export function SpeciesStudyTreeMap({
   maxScore,
   hoveredSpecies = null,
   onHoverSpecies,
+  onCellClick,
 }: SpeciesStudyTreeMapProps) {
-  const [copiedSpecies, setCopiedSpecies] = useState<string | null>(null)
-  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (copyResetRef.current) {
-        clearTimeout(copyResetRef.current)
-      }
-    }
-  }, [])
-
-  const handleCellCopy = useCallback((species: string | null) => {
-    if (!species) return
-
-    copySpeciesNameToClipboard(species)
-
-    if (copyResetRef.current) {
-      clearTimeout(copyResetRef.current)
-      copyResetRef.current = null
-    }
-
-    setCopiedSpecies(species)
-
-    copyResetRef.current = setTimeout(() => {
-      setCopiedSpecies((current) => (current === species ? null : current))
-      copyResetRef.current = null
-    }, 1200)
-  }, [])
-
   const { treemapData, collapsedSpeciesCount, collapsedReferenceCount } =
     useMemo(() => {
       const rankedData = data
@@ -418,15 +366,12 @@ export function SpeciesStudyTreeMap({
               <CustomTreeMapContent
                 hoveredSpecies={hoveredSpecies}
                 onHoverSpecies={onHoverSpecies}
-                onCellCopy={handleCellCopy}
+                onCellClick={onCellClick}
               />
             }
             aspectRatio={4 / 3}
           >
-            <Tooltip
-              content={<CustomTooltip copiedSpecies={copiedSpecies} />}
-              isAnimationActive={false}
-            />
+            <Tooltip content={<CustomTooltip />} isAnimationActive={false} />
           </Treemap>
         </ResponsiveContainer>
       </div>

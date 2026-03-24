@@ -68,6 +68,7 @@ export type FilterPanelProps = {
     missingUseMetadataTrees: number
     traitCoverageLabel: string
   }
+  filteredSpeciesCount: number
   filteredTreeRows: FilteredTreeRow[]
   onReset: () => void
 }
@@ -89,6 +90,7 @@ export function FilterPanel({
   showNoUse,
   onToggleShowNoUse,
   dataCoverage,
+  filteredSpeciesCount,
   filteredTreeRows,
   onReset,
 }: FilterPanelProps) {
@@ -198,8 +200,8 @@ export function FilterPanel({
   const useGapSeverity = getGapSeverity(useMissingPct)
 
   return (
-    <aside className="rounded-lg border border-border bg-card/80 p-4 shadow-sm backdrop-blur-xl">
-      <div className="mt-4 flex flex-col gap-2">
+    <aside className="flex h-full flex-col rounded-lg border border-border bg-card/80 p-4 shadow-sm backdrop-blur-xl">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -493,7 +495,7 @@ export function FilterPanel({
           </div>
         </div>
       ) : null}
-      <div className="mt-4 rounded-md border border-input bg-background p-3">
+      {/* <div className="mt-4 rounded-md border border-input bg-background p-3">
         <p className="text-xs font-medium text-muted-foreground">
           Data Coverage
         </p>
@@ -577,21 +579,23 @@ export function FilterPanel({
             </span>
           </div>
         </div>
-      </div>
-      <div className="mt-4 border-t border-border pt-3">
+      </div> */}
+      <div className="mt-4 flex-1 border-t border-border pt-3">
         <Button
           type="button"
-          size="lg"
           onClick={() => setIsFilteredTableOpen(true)}
-          className="w-full justify-between rounded-lg border-emerald-300/35 bg-linear-to-r from-emerald-500 to-cyan-500 text-white shadow-sm transition-all hover:from-emerald-400 hover:to-cyan-400 hover:shadow-md"
+          className="flex h-full w-full flex-col items-start justify-between rounded-lg border-emerald-300/35 bg-linear-to-br from-emerald-500 to-cyan-500 p-4 text-left text-white shadow-sm transition-all hover:from-emerald-400 hover:to-cyan-400 hover:shadow-md"
         >
-          <span className="inline-flex items-center gap-2 text-[11px] font-semibold">
-            <Table2 className="h-3.5 w-3.5" />
-            View Filtered Results
-          </span>
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">
-            {filteredCount}
-          </span>
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold">
+              <Table2 className="h-4 w-4" />
+              View Filtered Results
+            </span>
+            <div className="space-y-1 text-[11px] text-white/90">
+              <p>Trees: {filteredCount}</p>
+              <p>Species: {filteredSpeciesCount}</p>
+            </div>
+          </div>
         </Button>
 
         <DataTableModal

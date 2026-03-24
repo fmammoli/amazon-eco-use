@@ -215,18 +215,30 @@ export function UseCategoryChart({
       >
         <BarChart
           data={data}
-          margin={{ top: 16, right: 4, bottom: 0, left: -12 }}
+          margin={{ top: 16, right: 4, bottom: 20, left: -12 }}
           barCategoryGap="30%"
           barGap={2}
         >
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="category"
+            label={{
+              value: "Use category",
+              position: "insideBottom",
+              offset: -4,
+              fontSize: 11,
+            }}
             tickLine={false}
             axisLine={false}
             tick={{ fontSize: 10 }}
           />
           <YAxis
+            label={{
+              value: "Count",
+              angle: -90,
+              position: "insideLeft",
+              fontSize: 11,
+            }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}

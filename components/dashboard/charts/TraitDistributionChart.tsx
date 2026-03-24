@@ -255,7 +255,7 @@ export function TraitDistributionChart({
       >
         <AreaChart
           data={bins}
-          margin={{ top: 12, right: 4, bottom: 0, left: -12 }}
+          margin={{ top: 12, right: 4, bottom: 20, left: -12 }}
           onClick={(state) => {
             const label = state?.activeLabel
             if (typeof label === "string") {
@@ -266,12 +266,24 @@ export function TraitDistributionChart({
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
+            label={{
+              value: `${displayTraitLabel} bins`,
+              position: "insideBottom",
+              offset: -4,
+              fontSize: 11,
+            }}
             tickLine={false}
             axisLine={false}
             interval={1}
             tick={{ fontSize: 10 }}
           />
           <YAxis
+            label={{
+              value: "Count",
+              angle: -90,
+              position: "insideLeft",
+              fontSize: 11,
+            }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -44,6 +44,24 @@ export function Dashboard() {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false)
+  const [centerOnCoordinates, setCenterOnCoordinates] = useState<{
+    coords: [number, number]
+    plantId?: string | number
+  } | null>(null)
+  const mapSectionRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (centerOnCoordinates && mapSectionRef.current) {
+      mapSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    }
+  }, [centerOnCoordinates])
+
+  const clearCenteredHighlight = useCallback(() => {
+    setCenterOnCoordinates(null)
+  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -101,6 +119,7 @@ export function Dashboard() {
     getTraitUseScatterData,
     dataCoverage,
     speciesMetadataByName,
+    mapFilterStats,
   } = useDashboardData()
 
   const maxTreeCount = useMemo(() => {
@@ -230,6 +249,41 @@ export function Dashboard() {
     })
   }, [filteredData?.features])
 
+  const treeReferenceTreeRows = useMemo<RankAbundanceTreeRow[]>(() => {
+    if (!filteredData?.features) return []
+
+    return filteredData.features.map((feature, index) => {
+      const props = feature.properties as Record<string, unknown> | null
+      const fallbackPlantId = feature.id ?? index + 1
+
+      return {
+        plant_id:
+          (props?.["plant_id"] as string | number | undefined) ??
+          fallbackPlantId,
+        species_name:
+          typeof props?.["species_name"] === "string"
+            ? props["species_name"]
+            : "Unknown",
+        family:
+          typeof props?.["Family"] === "string"
+            ? props["Family"]
+            : typeof props?.["gbif_family"] === "string"
+              ? props["gbif_family"]
+              : "-",
+        height:
+          typeof props?.["Height"] === "number" &&
+          Number.isFinite(props["Height"])
+            ? props["Height"]
+            : null,
+        dbh_2022:
+          typeof props?.["DBH_2022"] === "number" &&
+          Number.isFinite(props["DBH_2022"])
+            ? props["DBH_2022"]
+            : null,
+      }
+    })
+  }, [filteredData?.features])
+
   const filteredTreeTableRows = useMemo(() => {
     if (!filteredData?.features) return []
 
@@ -275,6 +329,71 @@ export function Dashboard() {
             : "No",
         task5_uses: task5UsesRaw ? task5UsesRaw.split("||").join("; ") : "-",
         coelho_uses: coelhoUsesRaw ? coelhoUsesRaw.split("||").join("; ") : "-",
+        height:
+          typeof props?.["Height"] === "number" &&
+          Number.isFinite(props["Height"])
+            ? props["Height"]
+            : typeof props?.["HEIGHT"] === "number" &&
+                Number.isFinite(props["HEIGHT"])
+              ? props["HEIGHT"]
+              : null,
+        dbh_2022:
+          typeof props?.["DBH_2022"] === "number" &&
+          Number.isFinite(props["DBH_2022"])
+            ? props["DBH_2022"]
+            : null,
+      }
+    })
+  }, [filteredData?.features])
+
+  const speciesTreemapTreeRows = useMemo(() => {
+    if (!filteredData?.features) return []
+
+    return filteredData.features.map((feature, index) => {
+      const props = feature.properties as Record<string, unknown> | null
+      const fallbackPlantId = feature.id ?? index + 1
+      const task5Use =
+        (props?.["task5_use"] as Record<string, unknown> | null | undefined) ??
+        null
+      const task5UsesRaw =
+        typeof props?.["task5_use_labels"] === "string"
+          ? props["task5_use_labels"]
+          : ""
+
+      return {
+        id:
+          (props?.["ID"] as string | number | undefined) ??
+          feature.id ??
+          index + 1,
+        plant_id:
+          (props?.["plant_id"] as string | number | undefined) ??
+          fallbackPlantId,
+        species_name:
+          typeof props?.["species_name"] === "string"
+            ? props["species_name"]
+            : "Unknown",
+        genus: typeof props?.["Genus"] === "string" ? props["Genus"] : "-",
+        family:
+          typeof props?.["Family"] === "string"
+            ? props["Family"]
+            : typeof props?.["gbif_family"] === "string"
+              ? props["gbif_family"]
+              : "-",
+        vernacular_name:
+          typeof props?.["vernacular_name"] === "string"
+            ? props["vernacular_name"]
+            : "-",
+        task5_uses: task5UsesRaw ? task5UsesRaw.split("||").join("; ") : "-",
+        task5_reference:
+          typeof task5Use?.["References_x"] === "string" &&
+          task5Use["References_x"].trim().length > 0
+            ? task5Use["References_x"]
+            : "-",
+        task5_webpage:
+          typeof task5Use?.["Webpage"] === "string" &&
+          task5Use["Webpage"].trim().length > 0
+            ? task5Use["Webpage"]
+            : "-",
         height:
           typeof props?.["Height"] === "number" &&
           Number.isFinite(props["Height"])
@@ -373,23 +492,22 @@ export function Dashboard() {
         onOpenChange={setDrawerOpen}
         selectedFeature={selectedFeature}
         onSelectFeature={setSelectedFeature}
+        onCenterOnCoordinates={setCenterOnCoordinates}
       />
 
       <main className="min-h-screen bg-background px-4 py-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-dvw gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-[auto_1fr]">
           <section className="col-span-full lg:col-span-2">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-1">
                 <h1 className="bg-linear-to-r from-emerald-500 via-cyan-500 to-sky-500 bg-clip-text font-serif text-2xl font-semibold tracking-tight text-transparent lg:text-4xl">
                   AmazonFACE Species Use Dashboard
                 </h1>
-                <p className="max-w-4xl text-xs text-muted-foreground lg:text-sm">
-                  Explore how plant uses in the AmazonFACE experimental rings
+
+                <p className="max-w-6xl text-xs text-muted-foreground lg:text-sm">
+                  Explore how plant uses in the AmazonFACE experimental plots
                   relate to species traits, abundance, and documented knowledge.
-                </p>
-                <p className="max-w-4xl text-[11px] text-muted-foreground/90 lg:text-xs">
-                  Based on AmazonFACE Task 5 research by Beatriz Tristão and
-                  Moara Canova.
+                  Based on Tristão and Canova (2025).
                 </p>
               </div>
 
@@ -437,15 +555,20 @@ export function Dashboard() {
             showNoUse={showNoUse}
             onToggleShowNoUse={() => setShowNoUse((prev) => !prev)}
             dataCoverage={dataCoverage}
+            filteredSpeciesCount={mapFilterStats.selected.species.total}
             filteredTreeRows={filteredTreeTableRows}
             onReset={resetFilters}
           />
 
           <MapSection
+            ref={mapSectionRef}
             data={filteredData}
             onFeatureClick={handleFeatureClick}
             highlightedSpecies={highlightedSpecies}
             selectedFeature={selectedFeature}
+            centerOnCoordinates={centerOnCoordinates}
+            onClearCenteredHighlight={clearCenteredHighlight}
+            mapFilterStats={mapFilterStats}
           />
 
           <RankAbundanceSection
@@ -467,10 +590,13 @@ export function Dashboard() {
             speciesStudyWithScores={speciesStudyWithScores}
             speciesStudyMaxScore={speciesStudyMaxScore}
             maxTreeCount={maxTreeCount}
+            onPlantIdClick={openPlantById}
+            speciesTreeRows={speciesTreemapTreeRows}
           />
 
           <TreeReferenceScatterSection
             data={treeReferenceScatterData}
+            treeRows={treeReferenceTreeRows}
             onPlantIdClick={openPlantById}
           />
 
