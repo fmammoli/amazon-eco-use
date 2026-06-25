@@ -10,7 +10,7 @@ export function usePlotsData() {
 
     const loadPlots = async () => {
       try {
-        const response = await fetch("/data/plots.geojson", {
+        const response = await fetch("/api/data?pathname=data/plots.geojson", {
           signal: controller.signal,
         })
 

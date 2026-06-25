@@ -1,6 +1,9 @@
 "use client"
 
-import speciesReferences from "@/public/data/species_references_by_species.json"
+import { useMemo } from "react"
+import type { SpeciesReferencesData } from "@/components/dashboard/types"
+
+type SpeciesReferenceEntry = { reference: string; webpage?: string }
 import {
   Drawer,
   DrawerClose,
@@ -74,17 +77,6 @@ const task5PlantPartKeys = [
 ] as const
 
 type UnknownRecord = Record<string, unknown>
-type SpeciesReferenceEntry = {
-  reference: string
-  webpage?: string
-}
-
-const speciesReferencesIndex = new Map<string, SpeciesReferenceEntry[]>(
-  Object.entries(
-    speciesReferences as Record<string, SpeciesReferenceEntry[]>
-  ).map(([species, references]) => [normalizeSpeciesName(species), references])
-)
-
 const notNull = <T,>(value: T | null): value is T => value !== null
 
 const hasAnyValues = (record: Record<string, unknown> | null) => {
@@ -97,6 +89,7 @@ export function PlantDetailsDrawer({
   selectedFeature,
   onSelectFeature,
   onCenterOnCoordinates,
+  speciesReferences,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -106,7 +99,19 @@ export function PlantDetailsDrawer({
     coords: [number, number]
     plantId?: string | number
   }) => void
+  speciesReferences: SpeciesReferencesData
 }) {
+  const speciesReferencesIndex = useMemo(
+    () =>
+      new Map<string, SpeciesReferenceEntry[]>(
+        Object.entries(speciesReferences).map(([species, references]) => [
+          normalizeSpeciesName(species),
+          references,
+        ])
+      ),
+    [speciesReferences]
+  )
+
   const selectedFeatureProps = (selectedFeature?.properties ??
     null) as UnknownRecord | null
 

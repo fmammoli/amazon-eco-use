@@ -1,64 +1,35 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { normalizeSpeciesName } from "@/components/dashboard/utils"
-import type { SpeciesMetadata } from "@/components/dashboard/types"
+import type {
+  DashboardInitialData,
+  SpeciesMetadata,
+} from "@/components/dashboard/types"
 
-export function useDashboardGeoData() {
-  const [geojson, setGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-  const [speciesMetadataByName, setSpeciesMetadataByName] = useState<
-    Map<string, SpeciesMetadata>
-  >(new Map())
+export function useDashboardGeoData({
+  geojson: rawGeojson,
+  speciesMetadata,
+}: Pick<DashboardInitialData, "geojson" | "speciesMetadata">) {
+  // Assign feature.id from plant_id (mutate in place once on first render)
+  const geojson = useMemo(() => {
+    rawGeojson.features.forEach((feature) => {
+      const props = (feature.properties ?? {}) as Record<string, unknown>
+      const plantId = props["plant_id"] as string | number | undefined
+      if (plantId != null) feature.id = plantId
+    })
+    return rawGeojson
+  }, [rawGeojson])
 
-  useEffect(() => {
-    let canceled = false
-
-    const load = async () => {
-      try {
-        const geoRes = await fetch(
-          "/data/final_AmzFACE_merged_by_coords.with_ids.geojson"
-        )
-        if (!geoRes.ok) throw new Error("Failed to load geojson")
-        const geoData = (await geoRes.json()) as GeoJSON.FeatureCollection
-
-        const speciesRes = await fetch(
-          "/data/final_data_species_with_gbif_inaturalist copy.json"
-        )
-        if (!speciesRes.ok) throw new Error("Failed to load species metadata")
-        const speciesMetadata = (await speciesRes.json()) as SpeciesMetadata[]
-
-        const speciesMap = new Map<string, SpeciesMetadata>()
-        speciesMetadata.forEach((sp) => {
-          const normalizedName = normalizeSpeciesName(sp?.Species)
-          if (!normalizedName) return
-
-          speciesMap.set(normalizedName, sp)
-        })
-
-        geoData.features.forEach((feature) => {
-          const props = (feature.properties ?? {}) as Record<string, unknown>
-          const plantId = props?.["plant_id"] as string | number | undefined
-
-          if (plantId != null) {
-            feature.id = plantId
-          }
-        })
-
-        if (!canceled) {
-          setSpeciesMetadataByName(speciesMap)
-          setGeojson(geoData)
-        }
-      } catch {
-        // ignore for now
-      }
-    }
-
-    load()
-    return () => {
-      canceled = true
-    }
-  }, [])
+  const speciesMetadataByName = useMemo(() => {
+    const map = new Map<string, SpeciesMetadata>()
+    speciesMetadata.forEach((sp) => {
+      const name = normalizeSpeciesName(sp?.Species)
+      if (name) map.set(name, sp)
+    })
+    return map
+  }, [speciesMetadata])
 
   const featuresByPlantId = useMemo(() => {
     const lookup = new Map<string | number, GeoJSON.Feature>()

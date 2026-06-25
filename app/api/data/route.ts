@@ -1,0 +1,30 @@
+import { get } from "@vercel/blob"
+import { type NextRequest, NextResponse } from "next/server"
+
+const AUTH_COOKIE = "dashboard_auth"
+
+export async function GET(request: NextRequest) {
+  if (request.cookies.get(AUTH_COOKIE)?.value !== "1") {
+    return new NextResponse("Unauthorized", { status: 401 })
+  }
+
+  const pathname = request.nextUrl.searchParams.get("pathname")
+  if (!pathname) {
+    return NextResponse.json({ error: "Missing pathname" }, { status: 400 })
+  }
+
+  const result = await get(pathname, {
+    access: "private",
+  })
+  if (result === null) {
+    return new NextResponse("Not found", { status: 404 })
+  }
+
+  return new NextResponse(result.stream, {
+    headers: {
+      "Cache-Control": "private, no-cache",
+      "Content-Type": result.blob.contentType ?? "application/octet-stream",
+      "X-Content-Type-Options": "nosniff",
+    },
+  })
+}

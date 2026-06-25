@@ -37,10 +37,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { useDashboardData } from "@/hooks/useDashboardData"
 import { computeSpeciesAbundance } from "@/lib/computeSpeciesAbundance"
+import type { DashboardInitialData } from "@/components/dashboard/types"
 
 const WELCOME_DIALOG_SEEN_KEY = "amazonface_dashboard_welcome_seen"
 
-export function Dashboard() {
+export function Dashboard({
+  initialData,
+}: {
+  initialData: DashboardInitialData
+}) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false)
@@ -119,7 +124,7 @@ export function Dashboard() {
     getTraitUseScatterData,
     speciesMetadataByName,
     mapFilterStats,
-  } = useDashboardData()
+  } = useDashboardData(initialData)
 
   const maxTreeCount = useMemo(() => {
     if (!speciesStudyWithScores || speciesStudyWithScores.length === 0) return 0
@@ -492,6 +497,7 @@ export function Dashboard() {
         selectedFeature={selectedFeature}
         onSelectFeature={setSelectedFeature}
         onCenterOnCoordinates={setCenterOnCoordinates}
+        speciesReferences={initialData.speciesReferences}
       />
 
       <main className="min-h-screen bg-background px-4 py-6 lg:px-8">
@@ -567,6 +573,7 @@ export function Dashboard() {
             centerOnCoordinates={centerOnCoordinates}
             onClearCenteredHighlight={clearCenteredHighlight}
             mapFilterStats={mapFilterStats}
+            plotsData={initialData.plotsData}
           />
 
           <RankAbundanceSection

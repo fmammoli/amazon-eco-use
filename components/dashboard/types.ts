@@ -91,3 +91,15 @@ export type TraitUseScatterRow = {
   use_category: string
   use_group: string
 }
+
+export type SpeciesReferencesData = Record<
+  string,
+  Array<{ reference: string; webpage?: string }>
+>
+
+export type DashboardInitialData = {
+  geojson: GeoJSON.FeatureCollection
+  speciesMetadata: SpeciesMetadata[]
+  plotsData: GeoJSON.FeatureCollection
+  speciesReferences: SpeciesReferencesData
+}

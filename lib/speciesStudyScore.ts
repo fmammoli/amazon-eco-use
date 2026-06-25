@@ -1,4 +1,4 @@
-import speciesReferences from "@/public/data/species_references_by_species.json"
+import type { SpeciesReferencesData } from "@/hooks/useSpeciesReferences"
 
 export interface SpeciesStudyData {
   species: string
@@ -29,8 +29,10 @@ export function getUniqueSpecies(features: SpeciesFeature[]): Set<string> {
 /**
  * Count references for a species from the species_references_by_species.json
  */
-export function getSpeciesReferenceCount(speciesName: string): number {
-  const refs = speciesReferences as Record<string, Array<{ reference: string }>>
+export function getSpeciesReferenceCount(
+  speciesName: string,
+  refs: SpeciesReferencesData
+): number {
   return refs[speciesName]?.length ?? 0
 }
 
@@ -51,14 +53,15 @@ export function getSpeciesTreeCount(
  * Returns array sorted by reference count (descending)
  */
 export function computeSpeciesStudyScores(
-  features: SpeciesFeature[]
+  features: SpeciesFeature[],
+  refs: SpeciesReferencesData
 ): SpeciesStudyData[] {
   const uniqueSpecies = getUniqueSpecies(features)
 
   const studyData: SpeciesStudyData[] = Array.from(uniqueSpecies).map(
     (species) => ({
       species,
-      referenceCount: getSpeciesReferenceCount(species),
+      referenceCount: getSpeciesReferenceCount(species, refs),
       treeCount: getSpeciesTreeCount(features, species),
     })
   )

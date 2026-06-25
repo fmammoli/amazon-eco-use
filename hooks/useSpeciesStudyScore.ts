@@ -5,6 +5,7 @@ import {
   SpeciesFeature,
   SpeciesStudyData,
 } from "@/lib/speciesStudyScore"
+import type { SpeciesReferencesData } from "@/components/dashboard/types"
 
 export interface UseSpeciesStudyScoreResult {
   speciesStudyData: SpeciesStudyData[]
@@ -14,7 +15,8 @@ export interface UseSpeciesStudyScoreResult {
 }
 
 export function useSpeciesStudyScore(
-  features: SpeciesFeature[] | null | undefined
+  features: SpeciesFeature[] | null | undefined,
+  refs: SpeciesReferencesData
 ): UseSpeciesStudyScoreResult {
   return useMemo(() => {
     if (!features || features.length === 0) {
@@ -26,7 +28,7 @@ export function useSpeciesStudyScore(
       }
     }
 
-    const studyData = computeSpeciesStudyScores(features)
+    const studyData = computeSpeciesStudyScores(features, refs)
 
     const speciesWithScores = studyData.map((data) => ({
       ...data,
@@ -43,5 +45,5 @@ export function useSpeciesStudyScore(
       maxScore,
       minScore,
     }
-  }, [features])
+  }, [features, refs])
 }

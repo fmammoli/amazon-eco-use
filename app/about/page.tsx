@@ -173,6 +173,14 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section className="space-y-2">
+          <h2 className="text-base font-semibold">Acknowledgements</h2>
+          <p className="text-sm text-muted-foreground">
+            This work was supported by the NSF SEEKCommons project, grant
+            #2226425.
+          </p>
+        </section>
+
         <footer className="pt-2">
           <Link
             href="/"

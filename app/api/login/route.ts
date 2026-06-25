@@ -2,9 +2,15 @@ import { NextResponse } from "next/server"
 
 const AUTH_COOKIE = "dashboard_auth"
 
-const ALLOWED_USERS: Record<string, string> = {
-  task5: "task5",
-  seekcommons: "seekcommons",
+function getAllowedUsers(): Record<string, string> {
+  const raw = process.env.AUTH_USERS ?? ""
+  return Object.fromEntries(
+    raw
+      .split(",")
+      .map((pair) => pair.split(":"))
+      .filter((parts) => parts.length === 2 && parts[0])
+      .map(([u, p]) => [u.trim(), p.trim()])
+  )
 }
 
 export async function POST(request: Request) {
@@ -16,7 +22,7 @@ export async function POST(request: Request) {
   const username = typeof body?.username === "string" ? body.username : ""
   const password = typeof body?.password === "string" ? body.password : ""
 
-  const isValid = ALLOWED_USERS[username] === password
+  const isValid = getAllowedUsers()[username] === password
 
   if (!isValid) {
     return NextResponse.json(

@@ -11,6 +11,7 @@ import {
   mergeSpeciesMetadataIntoProps,
   normalizeSpeciesName,
 } from "@/components/dashboard/utils"
+import type { DashboardInitialData } from "@/components/dashboard/types"
 import { useDashboardGeoData } from "@/hooks/dashboard/useDashboardGeoData"
 import { useDashboardUrlSync } from "./dashboard/useDashboardUrlSync"
 import { useDataCoverage } from "@/hooks/dashboard/useDataCoverage"
@@ -20,7 +21,7 @@ import { useTraitUseScatterData } from "@/hooks/dashboard/useTraitUseScatterData
 import { useUseCategoryData } from "@/hooks/dashboard/useUseCategoryData"
 import { useSpeciesStudyScore } from "@/hooks/useSpeciesStudyScore"
 
-export function useDashboardData() {
+export function useDashboardData(initialData: DashboardInitialData) {
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [traitFilters, setTraitFilters] = useState<
     Array<{ id: string; trait: string; range: [number, number] }>
@@ -49,7 +50,10 @@ export function useDashboardData() {
     featuresByPlantId,
     numericTraits,
     traitDomains,
-  } = useDashboardGeoData()
+  } = useDashboardGeoData({
+    geojson: initialData.geojson,
+    speciesMetadata: initialData.speciesMetadata,
+  })
 
   const selectedPlantId = useMemo(() => {
     if (!selectedFeature) return null
@@ -200,7 +204,10 @@ export function useDashboardData() {
   const {
     speciesWithScores: speciesStudyWithScores,
     maxScore: speciesStudyMaxScore,
-  } = useSpeciesStudyScore(filteredData?.features ?? null)
+  } = useSpeciesStudyScore(
+    filteredData?.features ?? null,
+    initialData.speciesReferences
+  )
 
   const mapFilterStats = useMemo(() => {
     const totalFeatures = geojson?.features ?? []

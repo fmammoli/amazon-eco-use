@@ -36,7 +36,6 @@ import {
   treeIdLabelLayer,
 } from "@/components/dashboard/map-view/layers"
 import { usePlotClusterData } from "@/components/dashboard/map-view/usePlotClusterData"
-import { usePlotsData } from "@/components/dashboard/map-view/usePlotsData"
 import { useDebouncedHover } from "@/components/dashboard/useDebouncedHover"
 import { normalizeSpeciesName } from "@/components/dashboard/utils"
 
@@ -49,6 +48,7 @@ export function MapView({
   selectedFeature,
   centerOnCoordinates,
   onClearCenteredHighlight,
+  plotsData,
 }: {
   data: GeoJSON.FeatureCollection | null
   onFeatureClick?: (feature: GeoJSON.Feature) => void
@@ -59,9 +59,9 @@ export function MapView({
     plantId?: string | number
   } | null
   onClearCenteredHighlight?: () => void
+  plotsData: GeoJSON.FeatureCollection | null
 }) {
   const mapRef = useRef<MapRef | null>(null)
-  const plotsData = usePlotsData()
   const [hoveredPlantId, setHoveredPlantId] = useState<string | number | null>(
     null
   )

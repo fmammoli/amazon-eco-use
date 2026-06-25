@@ -13,6 +13,7 @@ type MapSectionProps = {
     plantId?: string | number
   } | null
   onClearCenteredHighlight?: () => void
+  plotsData: GeoJSON.FeatureCollection | null
   mapFilterStats: {
     dataset: {
       trees: { total: number; withUse: number; withoutUse: number }
@@ -34,6 +35,7 @@ export const MapSection = forwardRef<HTMLElement, MapSectionProps>(
       selectedFeature,
       centerOnCoordinates,
       onClearCenteredHighlight,
+      plotsData,
       mapFilterStats,
     },
     ref
@@ -70,6 +72,7 @@ export const MapSection = forwardRef<HTMLElement, MapSectionProps>(
           selectedFeature={selectedFeature}
           centerOnCoordinates={centerOnCoordinates}
           onClearCenteredHighlight={onClearCenteredHighlight}
+          plotsData={plotsData}
         />
       </section>
     )
